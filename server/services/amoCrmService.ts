@@ -58,7 +58,9 @@ export class AmoCrmService {
       if (!baseUrl.includes('.amocrm.ru')) {
         baseUrl = `${baseUrl}.amocrm.ru`;
       }
-      const url = `https://${baseUrl}/api/v4/account`;
+      
+      // Используем тот же эндпоинт что и для получения метаданных - он точно работает
+      const url = `https://${baseUrl}/api/v4/leads/pipelines`;
       
       console.log('Testing AmoCRM connection:', { url, hasApiKey: !!apiKey });
       
