@@ -107,4 +107,15 @@
   .sidebar-gradient {
     background: linear-gradient(180deg, hsl(240, 10%, 3.9%) 0%, hsl(240, 3.7%, 15.9%) 100%);
   }
+
+  /* Improve button visibility in dark theme */
+  .dark .btn-outline {
+    @apply border-border;
+    color: hsl(var(--foreground));
+  }
+
+  .dark .btn-outline:hover {
+    @apply bg-muted;
+    color: hsl(var(--foreground));
+  }
 }

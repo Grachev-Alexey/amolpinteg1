@@ -43,7 +43,8 @@ export default function AuthPage() {
         title: "Успешный вход",
         description: "Добро пожаловать в систему интеграции!",
       });
-      navigate("/");
+      // Force reload to update authentication state
+      window.location.href = "/";
     },
     onError: (error: any) => {
       toast({
@@ -64,7 +65,8 @@ export default function AuthPage() {
         title: "Успешная регистрация",
         description: "Добро пожаловать в систему интеграции!",
       });
-      navigate("/");
+      // Force reload to update authentication state
+      window.location.href = "/";
     },
     onError: (error: any) => {
       toast({
