@@ -30,8 +30,8 @@ export default function CallResults() {
   const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>("");
-  const [filterResult, setFilterResult] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterResult, setFilterResult] = useState<string>("all");
   const [newCallResult, setNewCallResult] = useState({
     contactName: "",
     phone: "",
@@ -152,8 +152,8 @@ export default function CallResults() {
 
   // Filter data based on selected filters
   const filteredData = callResults.filter((result: any) => {
-    const statusMatch = !filterStatus || result.syncStatus === filterStatus;
-    const resultMatch = !filterResult || result.result.toLowerCase().includes(filterResult.toLowerCase());
+    const statusMatch = filterStatus === "all" || result.syncStatus === filterStatus;
+    const resultMatch = filterResult === "all" || result.result.toLowerCase().includes(filterResult.toLowerCase());
     return statusMatch && resultMatch;
   });
 
@@ -374,7 +374,7 @@ export default function CallResults() {
                   <SelectValue placeholder="Все статусы" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Все статусы</SelectItem>
+                  <SelectItem value="all">Все статусы</SelectItem>
                   <SelectItem value="pending">Ожидает</SelectItem>
                   <SelectItem value="synced">Синхронизировано</SelectItem>
                   <SelectItem value="failed">Ошибка</SelectItem>
@@ -388,7 +388,7 @@ export default function CallResults() {
                   <SelectValue placeholder="Все результаты" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Все результаты</SelectItem>
+                  <SelectItem value="all">Все результаты</SelectItem>
                   <SelectItem value="заинтересован">Заинтересован</SelectItem>
                   <SelectItem value="не интересует">Не интересует</SelectItem>
                   <SelectItem value="не отвечает">Не отвечает</SelectItem>
@@ -400,8 +400,8 @@ export default function CallResults() {
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setFilterStatus("");
-                  setFilterResult("");
+                  setFilterStatus("all");
+                  setFilterResult("all");
                 }}
               >
                 Сбросить фильтры

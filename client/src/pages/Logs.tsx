@@ -22,8 +22,8 @@ import {
 export default function Logs() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
-  const [filterLevel, setFilterLevel] = useState<string>("");
-  const [filterSource, setFilterSource] = useState<string>("");
+  const [filterLevel, setFilterLevel] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
 
   // Fetch logs
   const { data: logs = [], isLoading: logsLoading, refetch } = useQuery({
@@ -125,8 +125,8 @@ export default function Logs() {
 
   // Filter data based on selected filters
   const filteredData = logs.filter((log: any) => {
-    const levelMatch = !filterLevel || log.level === filterLevel;
-    const sourceMatch = !filterSource || log.source === filterSource;
+    const levelMatch = filterLevel === "all" || log.level === filterLevel;
+    const sourceMatch = filterSource === "all" || log.source === filterSource;
     return levelMatch && sourceMatch;
   });
 
@@ -299,7 +299,7 @@ export default function Logs() {
                   <SelectValue placeholder="Все уровни" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Все уровни</SelectItem>
+                  <SelectItem value="all">Все уровни</SelectItem>
                   <SelectItem value="info">Информация</SelectItem>
                   <SelectItem value="warning">Предупреждение</SelectItem>
                   <SelectItem value="error">Ошибка</SelectItem>
@@ -326,8 +326,8 @@ export default function Logs() {
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setFilterLevel("");
-                  setFilterSource("");
+                  setFilterLevel("all");
+                  setFilterSource("all");
                 }}
               >
                 Сбросить фильтры

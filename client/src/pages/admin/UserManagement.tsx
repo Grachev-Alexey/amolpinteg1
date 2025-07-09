@@ -294,7 +294,7 @@ export default function UserManagement() {
               </div>
               <div>
                 <Label htmlFor="edit-role">Роль</Label>
-                <Select name="role" defaultValue={editingUser.role}>
+                <Select name="role" defaultValue={editingUser.role || "user"}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
