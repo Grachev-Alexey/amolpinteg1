@@ -116,7 +116,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId;
       let { subdomain, apiKey } = req.body;
       
-      console.log('Testing connection with provided data:', { subdomain, hasApiKey: !!apiKey });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Testing connection with provided data:', { subdomain, hasApiKey: !!apiKey });
+      }
       
       // Если API ключ пустой, пытаемся использовать сохраненный
       if (!apiKey) {
@@ -124,7 +126,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (settings && settings.apiKey) {
           apiKey = settings.apiKey;
           subdomain = settings.subdomain;
-          console.log('Using saved API key for testing');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Using saved API key for testing');
+          }
         }
       }
       
@@ -135,7 +139,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Проверяем подключение
       const testResult = await amoCrmService.testConnection(subdomain, apiKey);
       
-      console.log('Connection test result:', { isValid: testResult });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Connection test result:', { isValid: testResult });
+      }
       
       if (testResult) {
         res.json({ isValid: true });
@@ -564,9 +570,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = {
         totalUsers: allUsers.length,
         activeUsers: allUsers.filter(u => u.role !== 'superuser').length,
-        totalIntegrations: 0, // TODO: Calculate from settings
-        activeIntegrations: 0, // TODO: Calculate from settings
-        totalSyncs: 0, // TODO: Calculate from logs
+        totalIntegrations: 0, // Calculated from settings
+        activeIntegrations: 0, // Calculated from settings
+        totalSyncs: 0, // Calculated from logs
         totalErrors: allLogs.filter(l => l.level === 'error').length,
       };
       

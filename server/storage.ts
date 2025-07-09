@@ -99,9 +99,11 @@ export class DatabaseStorage implements IStorage {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       };
-      console.log('STORAGE: Clean user role:', cleanUser.role);
-      console.log('STORAGE: All keys:', Object.keys(cleanUser));
-      console.log('STORAGE: Role enumerable?', Object.propertyIsEnumerable.call(cleanUser, 'role'));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('STORAGE: Clean user role:', cleanUser.role);
+        console.log('STORAGE: All keys:', Object.keys(cleanUser));
+        console.log('STORAGE: Role enumerable?', Object.propertyIsEnumerable.call(cleanUser, 'role'));
+      }
       return cleanUser;
     }
     
@@ -140,8 +142,10 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     
     if (user) {
-      console.log('STORAGE API: Raw user role:', user.role);
-      console.log('STORAGE API: Raw user keys:', Object.keys(user));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('STORAGE API: Raw user role:', user.role);
+        console.log('STORAGE API: Raw user keys:', Object.keys(user));
+      }
       
       // Return object without password for API responses
       const apiUser = {
@@ -156,8 +160,10 @@ export class DatabaseStorage implements IStorage {
         updatedAt: user.updatedAt
       };
       
-      console.log('STORAGE API: API User role:', apiUser.role);
-      console.log('STORAGE API: API User JSON:', JSON.stringify(apiUser));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('STORAGE API: API User role:', apiUser.role);
+        console.log('STORAGE API: API User JSON:', JSON.stringify(apiUser));
+      }
       return apiUser;
     }
     

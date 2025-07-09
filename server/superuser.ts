@@ -8,7 +8,9 @@ export async function createSuperuserIfNotExists(): Promise<void> {
     const existingSuperuser = await storage.getUserByUsername("entize");
     
     if (existingSuperuser) {
-      console.log("Суперпользователь уже существует");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Суперпользователь уже существует");
+      }
       return;
     }
 
@@ -25,7 +27,9 @@ export async function createSuperuserIfNotExists(): Promise<void> {
       role: "superuser",
     });
 
-    console.log("Суперпользователь создан:", superuser.username);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Суперпользователь создан:", superuser.username);
+    }
   } catch (error) {
     console.error("Ошибка при создании суперпользователя:", error);
   }
