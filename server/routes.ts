@@ -15,7 +15,7 @@ const upload = multer({ dest: "uploads/" });
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
-  if (!req.requireAuth()) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Authentication required" });
   }
   next();
