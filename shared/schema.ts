@@ -39,7 +39,7 @@ export const users = pgTable("users", {
 // AmoCRM connection settings
 export const amoCrmSettings = pgTable("amocrm_settings", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull().unique().references(() => users.id),
   subdomain: varchar("subdomain").notNull(),
   apiKey: text("api_key").notNull(), // encrypted
   isActive: boolean("is_active").default(true),
@@ -50,7 +50,7 @@ export const amoCrmSettings = pgTable("amocrm_settings", {
 // LPTracker connection settings
 export const lpTrackerSettings = pgTable("lptracker_settings", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull().unique().references(() => users.id),
   apiKey: text("api_key").notNull(), // encrypted
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
