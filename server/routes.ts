@@ -52,7 +52,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
       });
       
-      const settings = await storage.saveAmoCrmSettings(validatedData);
+      // Шифруем API-ключ перед сохранением
+      const encryptedData = {
+        ...validatedData,
+        apiKey: await amoCrmService.encryptApiKey(validatedData.apiKey)
+      };
+      const settings = await storage.saveAmoCrmSettings(encryptedData);
       await logService.log(userId, 'info', 'Настройки AmoCRM сохранены', { settings }, 'settings');
       res.json(settings);
     } catch (error) {

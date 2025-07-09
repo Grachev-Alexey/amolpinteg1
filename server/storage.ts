@@ -174,18 +174,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveAmoCrmMetadata(metadata: InsertAmoCrmMetadata): Promise<AmoCrmMetadata> {
-    const [saved] = await db
-      .insert(amoCrmMetadata)
-      .values(metadata)
-      .onConflictDoUpdate({
-        target: [amoCrmMetadata.userId, amoCrmMetadata.type],
-        set: {
-          ...metadata,
+    // Сначала пробуем найти существующую запись
+    const existing = await this.getAmoCrmMetadata(metadata.userId, metadata.type);
+    
+    if (existing) {
+      // Если существует, обновляем
+      const [updated] = await db
+        .update(amoCrmMetadata)
+        .set({
+          data: metadata.data,
           updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return saved;
+        })
+        .where(and(
+          eq(amoCrmMetadata.userId, metadata.userId),
+          eq(amoCrmMetadata.type, metadata.type)
+        ))
+        .returning();
+      return updated;
+    } else {
+      // Если не существует, создаем новую
+      const [created] = await db
+        .insert(amoCrmMetadata)
+        .values(metadata)
+        .returning();
+      return created;
+    }
   }
 
   async updateAmoCrmMetadata(userId: string, type: string, data: any): Promise<AmoCrmMetadata | undefined> {

@@ -11,6 +11,10 @@ export class AmoCrmService {
     this.logService = new LogService(storage);
   }
 
+  public encryptApiKey(text: string): string {
+    return this.encrypt(text);
+  }
+
   private encrypt(text: string): string {
     const algorithm = 'aes-256-ctr';
     const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
@@ -21,14 +25,24 @@ export class AmoCrmService {
   }
 
   private decrypt(hash: string): string {
-    const algorithm = 'aes-256-ctr';
-    const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
-    const [ivHex, encryptedHex] = hash.split(':');
-    const iv = Buffer.from(ivHex, 'hex');
-    const encrypted = Buffer.from(encryptedHex, 'hex');
-    const decipher = crypto.createDecipher(algorithm, secretKey);
-    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-    return decrypted.toString();
+    // Проверяем, зашифрован ли ключ (содержит ли двоеточие)
+    if (!hash || !hash.includes(':')) {
+      return hash; // Возвращаем как есть, если не зашифрован
+    }
+    
+    try {
+      const algorithm = 'aes-256-ctr';
+      const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
+      const [ivHex, encryptedHex] = hash.split(':');
+      const iv = Buffer.from(ivHex, 'hex');
+      const encrypted = Buffer.from(encryptedHex, 'hex');
+      const decipher = crypto.createDecipher(algorithm, secretKey);
+      const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+      return decrypted.toString();
+    } catch (error) {
+      console.error('Decryption failed:', error);
+      return hash; // Возвращаем как есть в случае ошибки
+    }
   }
 
   async testConnection(subdomain: string, apiKey: string): Promise<boolean> {
@@ -78,13 +92,26 @@ export class AmoCrmService {
         },
       });
 
+      await this.logService.log(userId, 'info', 'Pipelines response', { 
+        status: pipelinesResponse.status, 
+        statusText: pipelinesResponse.statusText,
+        url: `${baseUrl}/leads/pipelines`
+      }, 'metadata');
+
       if (pipelinesResponse.ok) {
         const pipelinesData = await pipelinesResponse.json();
+        await this.logService.log(userId, 'info', 'Pipelines data received', { pipelinesData }, 'metadata');
         await this.storage.saveAmoCrmMetadata({
           userId,
           type: 'pipelines',
           data: pipelinesData,
         });
+      } else {
+        const errorText = await pipelinesResponse.text();
+        await this.logService.log(userId, 'error', 'Pipelines API error', { 
+          status: pipelinesResponse.status, 
+          error: errorText 
+        }, 'metadata');
       }
 
       // Получение полей сделок
@@ -95,6 +122,11 @@ export class AmoCrmService {
         },
       });
 
+      await this.logService.log(userId, 'info', 'Leads fields response', { 
+        status: leadsFieldsResponse.status, 
+        statusText: leadsFieldsResponse.statusText 
+      }, 'metadata');
+
       if (leadsFieldsResponse.ok) {
         const fieldsData = await leadsFieldsResponse.json();
         await this.storage.saveAmoCrmMetadata({
@@ -102,6 +134,12 @@ export class AmoCrmService {
           type: 'leads_fields',
           data: fieldsData,
         });
+      } else {
+        const errorText = await leadsFieldsResponse.text();
+        await this.logService.log(userId, 'error', 'Leads fields API error', { 
+          status: leadsFieldsResponse.status, 
+          error: errorText 
+        }, 'metadata');
       }
 
       // Получение полей контактов
@@ -112,6 +150,11 @@ export class AmoCrmService {
         },
       });
 
+      await this.logService.log(userId, 'info', 'Contacts fields response', { 
+        status: contactsFieldsResponse.status, 
+        statusText: contactsFieldsResponse.statusText 
+      }, 'metadata');
+
       if (contactsFieldsResponse.ok) {
         const fieldsData = await contactsFieldsResponse.json();
         await this.storage.saveAmoCrmMetadata({
@@ -119,6 +162,12 @@ export class AmoCrmService {
           type: 'contacts_fields',
           data: fieldsData,
         });
+      } else {
+        const errorText = await contactsFieldsResponse.text();
+        await this.logService.log(userId, 'error', 'Contacts fields API error', { 
+          status: contactsFieldsResponse.status, 
+          error: errorText 
+        }, 'metadata');
       }
 
       await this.logService.log(userId, 'info', 'Метаданные AmoCRM успешно обновлены', {}, 'metadata');

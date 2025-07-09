@@ -65,7 +65,9 @@ export const amoCrmMetadata = pgTable("amocrm_metadata", {
   data: jsonb("data").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  userIdTypeUnique: index("amocrm_metadata_user_id_type_unique").on(table.userId, table.type)
+}));
 
 // Synchronization rules
 export const syncRules = pgTable("sync_rules", {
