@@ -124,7 +124,7 @@ export default function Settings() {
       } else {
         toast({
           title: "Ошибка подключения",
-          description: "Не удалось подключиться к AmoCRM",
+          description: "Проверьте правильность поддомена и API ключа. Убедитесь, что API ключ действующий и имеет необходимые права.",
           variant: "destructive",
         });
       }
@@ -143,7 +143,7 @@ export default function Settings() {
       }
       toast({
         title: "Ошибка",
-        description: "Не удалось проверить подключение",
+        description: "Не удалось проверить подключение. Проверьте интернет соединение.",
         variant: "destructive",
       });
     },

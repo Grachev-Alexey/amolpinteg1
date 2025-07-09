@@ -54,12 +54,25 @@ export class AmoCrmService {
       }
       const url = `https://${baseUrl}/api/v4/account`;
       
+      console.log('Testing AmoCRM connection:', { url, hasApiKey: !!apiKey });
+      
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
       });
+      
+      console.log('AmoCRM test response:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok 
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('AmoCRM test error response:', errorText);
+      }
       
       return response.ok;
     } catch (error) {
