@@ -313,7 +313,7 @@ export default function Logs() {
                   <SelectValue placeholder="Все источники" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Все источники</SelectItem>
+                  <SelectItem value="all">Все источники</SelectItem>
                   {uniqueSources.map((source) => (
                     <SelectItem key={source} value={source}>
                       {source}

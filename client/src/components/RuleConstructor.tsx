@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,17 +26,23 @@ export default function RuleConstructor({
   const [rule, setRule] = useState(initialRule || {
     name: "",
     description: "",
+    webhookSource: "",
     conditions: { operator: "AND", rules: [] },
     actions: { list: [] },
     isActive: true
   });
 
+  const webhookSources = [
+    { value: "amocrm", label: "AmoCRM" },
+    { value: "lptracker", label: "LPTracker" },
+  ];
+
   const conditionTypes = [
-    { value: "event_type", label: "Тип события" },
+    { value: "pipeline", label: "Воронка" },
+    { value: "status", label: "Статус" },
     { value: "field_equals", label: "Поле равно" },
     { value: "field_contains", label: "Поле содержит" },
-    { value: "status_changed", label: "Изменение статуса" },
-    { value: "pipeline_changed", label: "Изменение воронки" },
+    { value: "field_not_empty", label: "Поле заполнено" },
   ];
 
   const actionTypes = [
@@ -47,13 +54,35 @@ export default function RuleConstructor({
     { value: "create_task", label: "Создать задачу" },
   ];
 
-  const eventTypes = [
-    { value: "lead_created", label: "Создана сделка" },
-    { value: "lead_status_changed", label: "Изменен статус сделки" },
-    { value: "contact_created", label: "Создан контакт" },
-    { value: "contact_updated", label: "Обновлен контакт" },
-    { value: "call_completed", label: "Завершен звонок" },
-  ];
+  // Load AmoCRM metadata
+  const { data: pipelinesData } = useQuery({
+    queryKey: ['/api/amocrm/metadata/pipelines'],
+    retry: false,
+  });
+
+  const { data: leadsFieldsData } = useQuery({
+    queryKey: ['/api/amocrm/metadata/leads_fields'],
+    retry: false,
+  });
+
+  const { data: contactsFieldsData } = useQuery({
+    queryKey: ['/api/amocrm/metadata/contacts_fields'],
+    retry: false,
+  });
+
+  // Extract pipelines and statuses from metadata
+  const pipelines = pipelinesData?.data?._embedded?.pipelines || [];
+  const allStatuses = pipelines.flatMap((pipeline: any) => 
+    pipeline._embedded?.statuses?.map((status: any) => ({
+      ...status,
+      pipelineName: pipeline.name,
+      pipelineId: pipeline.id
+    })) || []
+  );
+
+  // Extract custom fields
+  const leadsFields = leadsFieldsData?.data?._embedded?.custom_fields || [];
+  const contactsFields = contactsFieldsData?.data?._embedded?.custom_fields || [];
 
   const addCondition = () => {
     const newCondition = {
@@ -175,6 +204,24 @@ export default function RuleConstructor({
               rows={2}
             />
           </div>
+          <div>
+            <Label htmlFor="webhookSource">Источник webhook</Label>
+            <Select
+              value={rule.webhookSource}
+              onValueChange={(value) => setRule({ ...rule, webhookSource: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Выберите источник" />
+              </SelectTrigger>
+              <SelectContent>
+                {webhookSources.map((source) => (
+                  <SelectItem key={source.value} value={source.value}>
+                    {source.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Separator />
@@ -218,18 +265,65 @@ export default function RuleConstructor({
                     </SelectContent>
                   </Select>
                   
-                  {condition.type === "event_type" && (
+                  {condition.type === "pipeline" && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm">равно</span>
+                      <Select
+                        value={condition.value}
+                        onValueChange={(value) => updateCondition(condition.id, "value", value)}
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Выберите воронку" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pipelines.map((pipeline: any) => (
+                            <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
+                              {pipeline.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {condition.type === "status" && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm">равно</span>
+                      <Select
+                        value={condition.value}
+                        onValueChange={(value) => updateCondition(condition.id, "value", value)}
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Выберите статус" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allStatuses.map((status: any) => (
+                            <SelectItem key={status.id} value={status.id.toString()}>
+                              {status.pipelineName}: {status.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {condition.type === "field_not_empty" && (
                     <Select
-                      value={condition.value}
-                      onValueChange={(value) => updateCondition(condition.id, "value", value)}
+                      value={condition.field}
+                      onValueChange={(value) => updateCondition(condition.id, "field", value)}
                     >
                       <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Тип события" />
+                        <SelectValue placeholder="Выберите поле" />
                       </SelectTrigger>
                       <SelectContent>
-                        {eventTypes.map((event) => (
-                          <SelectItem key={event.value} value={event.value}>
-                            {event.label}
+                        {leadsFields.map((field: any) => (
+                          <SelectItem key={`leads-${field.id}`} value={field.id.toString()}>
+                            📋 {field.name}
+                          </SelectItem>
+                        ))}
+                        {contactsFields.map((field: any) => (
+                          <SelectItem key={`contacts-${field.id}`} value={field.id.toString()}>
+                            👤 {field.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -238,12 +332,29 @@ export default function RuleConstructor({
                   
                   {(condition.type === "field_equals" || condition.type === "field_contains") && (
                     <>
-                      <Input
-                        placeholder="Поле"
+                      <Select
                         value={condition.field}
-                        onChange={(e) => updateCondition(condition.id, "field", e.target.value)}
-                        className="w-32"
-                      />
+                        onValueChange={(value) => updateCondition(condition.id, "field", value)}
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Выберите поле" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {leadsFields.map((field: any) => (
+                            <SelectItem key={`leads-${field.id}`} value={field.id.toString()}>
+                              📋 {field.name}
+                            </SelectItem>
+                          ))}
+                          {contactsFields.map((field: any) => (
+                            <SelectItem key={`contacts-${field.id}`} value={field.id.toString()}>
+                              👤 {field.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-sm">
+                        {condition.type === "field_equals" ? "равно" : "содержит"}
+                      </span>
                       <Input
                         placeholder="Значение"
                         value={condition.value}
