@@ -15,11 +15,16 @@ export class AmoCrmService {
     return this.encrypt(text);
   }
 
+  public decryptApiKey(hash: string): string {
+    return this.decrypt(hash);
+  }
+
   private encrypt(text: string): string {
     const algorithm = 'aes-256-ctr';
     const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
+    const key = crypto.scryptSync(secretKey, 'salt', 32);
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(algorithm, secretKey);
+    const cipher = crypto.createCipher(algorithm, key);
     const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
     return iv.toString('hex') + ':' + encrypted.toString('hex');
   }
@@ -33,10 +38,11 @@ export class AmoCrmService {
     try {
       const algorithm = 'aes-256-ctr';
       const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
+      const key = crypto.scryptSync(secretKey, 'salt', 32);
       const [ivHex, encryptedHex] = hash.split(':');
       const iv = Buffer.from(ivHex, 'hex');
       const encrypted = Buffer.from(encryptedHex, 'hex');
-      const decipher = crypto.createDecipher(algorithm, secretKey);
+      const decipher = crypto.createDecipher(algorithm, key);
       const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
       return decrypted.toString();
     } catch (error) {

@@ -72,9 +72,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/amocrm/test-connection', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
-      const { subdomain, apiKey } = req.body;
+      let { subdomain, apiKey } = req.body;
       
+      console.log('Testing connection with provided data:', { subdomain, hasApiKey: !!apiKey });
+      
+      // Если API ключ пустой, пытаемся использовать сохраненный
+      if (!apiKey) {
+        const settings = await storage.getAmoCrmSettings(userId);
+        if (settings && settings.apiKey) {
+          apiKey = amoCrmService.decryptApiKey(settings.apiKey);
+          subdomain = settings.subdomain;
+          console.log('Using saved encrypted API key for testing');
+        }
+      }
+      
+      if (!apiKey) {
+        return res.json({ isValid: false, message: "API ключ не предоставлен" });
+      }
+      
+      // Проверяем подключение
       const isValid = await amoCrmService.testConnection(subdomain, apiKey);
+      
+      console.log('Connection test result:', { isValid });
+      
       res.json({ isValid });
     } catch (error) {
       console.error("Error testing AmoCRM connection:", error);
