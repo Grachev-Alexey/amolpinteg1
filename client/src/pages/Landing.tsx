@@ -16,13 +16,21 @@ export default function Landing() {
               </div>
               <h1 className="text-xl font-bold">CRM Интегратор</h1>
             </div>
-            <Button 
-              onClick={() => window.location.href = '/api/login'}
-              className="gradient-primary hover:opacity-90"
-            >
-              Войти
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => window.location.href = '/auth'}
+                variant="outline"
+              >
+                Войти
+              </Button>
+              <Button 
+                onClick={() => window.location.href = '/auth'}
+                className="gradient-primary hover:opacity-90"
+              >
+                Регистрация
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -42,7 +50,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => window.location.href = '/auth'}
               className="gradient-primary hover:opacity-90"
             >
               Начать работу

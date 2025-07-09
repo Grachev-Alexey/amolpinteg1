@@ -176,7 +176,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const userId = req.session.userId;
       
-      const rule = await storage.updateSyncRule(parseInt(id), req.body);
+      // Remove timestamp fields from the request body before updating
+      const { createdAt, updatedAt, ...updateData } = req.body;
+      
+      const rule = await storage.updateSyncRule(parseInt(id), updateData);
       if (!rule) {
         return res.status(404).json({ message: "Правило не найдено" });
       }
