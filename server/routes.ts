@@ -91,11 +91,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Проверяем подключение
-      const isValid = await amoCrmService.testConnection(subdomain, apiKey);
+      const testResult = await amoCrmService.testConnection(subdomain, apiKey);
       
-      console.log('Connection test result:', { isValid });
+      console.log('Connection test result:', { isValid: testResult });
       
-      res.json({ isValid });
+      if (testResult) {
+        res.json({ isValid: true });
+      } else {
+        res.json({ 
+          isValid: false, 
+          message: "API ключ недействителен или истек. Проверьте правильность ключа в настройках AmoCRM." 
+        });
+      }
     } catch (error) {
       console.error("Error testing AmoCRM connection:", error);
       res.status(500).json({ message: "Не удалось проверить подключение к AmoCRM" });
