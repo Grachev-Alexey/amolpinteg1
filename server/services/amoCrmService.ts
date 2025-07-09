@@ -12,38 +12,36 @@ export class AmoCrmService {
 
   async testConnection(subdomain: string, apiKey: string): Promise<boolean> {
     try {
-      // Нормализация URL - убираем https:// если есть и добавляем .amocrm.ru если нет
-      let baseUrl = subdomain.replace(/^https?:\/\//, '');
-      if (!baseUrl.includes('.amocrm.ru')) {
+      let baseUrl = subdomain.replace(/^https?:\/\//, "");
+      if (!baseUrl.includes(".amocrm.ru")) {
         baseUrl = `${baseUrl}.amocrm.ru`;
       }
-      
-      // Используем тот же эндпоинт что и для получения метаданных - он точно работает
+
       const url = `https://${baseUrl}/api/v4/leads/pipelines`;
-      
-      console.log('Testing AmoCRM connection:', { url, hasApiKey: !!apiKey });
-      
+
+      console.log("Testing AmoCRM connection:", { url, hasApiKey: !!apiKey });
+
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
       });
-      
-      console.log('AmoCRM test response:', { 
-        status: response.status, 
+
+      console.log("AmoCRM test response:", {
+        status: response.status,
         statusText: response.statusText,
-        ok: response.ok 
+        ok: response.ok,
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('AmoCRM test error response:', errorText);
+        console.log("AmoCRM test error response:", errorText);
       }
-      
+
       return response.ok;
     } catch (error) {
-      console.error('AmoCRM connection test failed:', error);
+      console.error("AmoCRM connection test failed:", error);
       return false;
     }
   }
@@ -52,14 +50,13 @@ export class AmoCrmService {
     try {
       const settings = await this.storage.getAmoCrmSettings(userId);
       if (!settings) {
-        throw new Error('AmoCRM settings not found');
+        throw new Error("AmoCRM settings not found");
       }
 
       const apiKey = settings.apiKey;
-      
-      // Нормализация URL - убираем https:// если есть и добавляем .amocrm.ru если нет
-      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
-      if (!normalizedSubdomain.includes('.amocrm.ru')) {
+
+      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, "");
+      if (!normalizedSubdomain.includes(".amocrm.ru")) {
         normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
       }
       const baseUrl = `https://${normalizedSubdomain}/api/v4`;
@@ -67,92 +64,152 @@ export class AmoCrmService {
       // Получение воронок
       const pipelinesResponse = await fetch(`${baseUrl}/leads/pipelines`, {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
       });
 
-      await this.logService.log(userId, 'info', 'Pipelines response', { 
-        status: pipelinesResponse.status, 
-        statusText: pipelinesResponse.statusText,
-        url: `${baseUrl}/leads/pipelines`
-      }, 'metadata');
+      await this.logService.log(
+        userId,
+        "info",
+        "Pipelines response",
+        {
+          status: pipelinesResponse.status,
+          statusText: pipelinesResponse.statusText,
+          url: `${baseUrl}/leads/pipelines`,
+        },
+        "metadata",
+      );
 
       if (pipelinesResponse.ok) {
         const pipelinesData = await pipelinesResponse.json();
-        await this.logService.log(userId, 'info', 'Pipelines data received', { pipelinesData }, 'metadata');
+        await this.logService.log(
+          userId,
+          "info",
+          "Pipelines data received",
+          { pipelinesData },
+          "metadata",
+        );
         await this.storage.saveAmoCrmMetadata({
           userId,
-          type: 'pipelines',
+          type: "pipelines",
           data: pipelinesData,
         });
       } else {
         const errorText = await pipelinesResponse.text();
-        await this.logService.log(userId, 'error', 'Pipelines API error', { 
-          status: pipelinesResponse.status, 
-          error: errorText 
-        }, 'metadata');
+        await this.logService.log(
+          userId,
+          "error",
+          "Pipelines API error",
+          {
+            status: pipelinesResponse.status,
+            error: errorText,
+          },
+          "metadata",
+        );
       }
 
       // Получение полей сделок
-      const leadsFieldsResponse = await fetch(`${baseUrl}/leads/custom_fields`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+      const leadsFieldsResponse = await fetch(
+        `${baseUrl}/leads/custom_fields`,
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
-      await this.logService.log(userId, 'info', 'Leads fields response', { 
-        status: leadsFieldsResponse.status, 
-        statusText: leadsFieldsResponse.statusText 
-      }, 'metadata');
+      await this.logService.log(
+        userId,
+        "info",
+        "Leads fields response",
+        {
+          status: leadsFieldsResponse.status,
+          statusText: leadsFieldsResponse.statusText,
+        },
+        "metadata",
+      );
 
       if (leadsFieldsResponse.ok) {
         const fieldsData = await leadsFieldsResponse.json();
         await this.storage.saveAmoCrmMetadata({
           userId,
-          type: 'leads_fields',
+          type: "leads_fields",
           data: fieldsData,
         });
       } else {
         const errorText = await leadsFieldsResponse.text();
-        await this.logService.log(userId, 'error', 'Leads fields API error', { 
-          status: leadsFieldsResponse.status, 
-          error: errorText 
-        }, 'metadata');
+        await this.logService.log(
+          userId,
+          "error",
+          "Leads fields API error",
+          {
+            status: leadsFieldsResponse.status,
+            error: errorText,
+          },
+          "metadata",
+        );
       }
 
       // Получение полей контактов
-      const contactsFieldsResponse = await fetch(`${baseUrl}/contacts/custom_fields`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+      const contactsFieldsResponse = await fetch(
+        `${baseUrl}/contacts/custom_fields`,
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
-      await this.logService.log(userId, 'info', 'Contacts fields response', { 
-        status: contactsFieldsResponse.status, 
-        statusText: contactsFieldsResponse.statusText 
-      }, 'metadata');
+      await this.logService.log(
+        userId,
+        "info",
+        "Contacts fields response",
+        {
+          status: contactsFieldsResponse.status,
+          statusText: contactsFieldsResponse.statusText,
+        },
+        "metadata",
+      );
 
       if (contactsFieldsResponse.ok) {
         const fieldsData = await contactsFieldsResponse.json();
         await this.storage.saveAmoCrmMetadata({
           userId,
-          type: 'contacts_fields',
+          type: "contacts_fields",
           data: fieldsData,
         });
       } else {
         const errorText = await contactsFieldsResponse.text();
-        await this.logService.log(userId, 'error', 'Contacts fields API error', { 
-          status: contactsFieldsResponse.status, 
-          error: errorText 
-        }, 'metadata');
+        await this.logService.log(
+          userId,
+          "error",
+          "Contacts fields API error",
+          {
+            status: contactsFieldsResponse.status,
+            error: errorText,
+          },
+          "metadata",
+        );
       }
 
-      await this.logService.log(userId, 'info', 'Метаданные AmoCRM успешно обновлены', {}, 'metadata');
+      await this.logService.log(
+        userId,
+        "info",
+        "Метаданные AmoCRM успешно обновлены",
+        {},
+        "metadata",
+      );
     } catch (error) {
-      await this.logService.log(userId, 'error', 'Ошибка при обновлении метаданных AmoCRM', { error }, 'metadata');
+      await this.logService.log(
+        userId,
+        "error",
+        "Ошибка при обновлении метаданных AmoCRM",
+        { error },
+        "metadata",
+      );
       throw error;
     }
   }
@@ -161,23 +218,22 @@ export class AmoCrmService {
     try {
       const settings = await this.storage.getAmoCrmSettings(userId);
       if (!settings) {
-        throw new Error('AmoCRM settings not found');
+        throw new Error("AmoCRM settings not found");
       }
 
       const apiKey = settings.apiKey;
-      
-      // Нормализация URL
-      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
-      if (!normalizedSubdomain.includes('.amocrm.ru')) {
+
+      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, "");
+      if (!normalizedSubdomain.includes(".amocrm.ru")) {
         normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
       }
       const url = `https://${normalizedSubdomain}/api/v4/leads`;
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify([leadData]),
       });
@@ -187,35 +243,50 @@ export class AmoCrmService {
       }
 
       const result = await response.json();
-      await this.logService.log(userId, 'info', 'Сделка создана в AmoCRM', { result }, 'sync');
+      await this.logService.log(
+        userId,
+        "info",
+        "Сделка создана в AmoCRM",
+        { result },
+        "sync",
+      );
       return result;
     } catch (error) {
-      await this.logService.log(userId, 'error', 'Ошибка при создании сделки в AmoCRM', { error }, 'sync');
+      await this.logService.log(
+        userId,
+        "error",
+        "Ошибка при создании сделки в AmoCRM",
+        { error },
+        "sync",
+      );
       throw error;
     }
   }
 
-  async updateLead(userId: string, leadId: number, leadData: any): Promise<any> {
+  async updateLead(
+    userId: string,
+    leadId: number,
+    leadData: any,
+  ): Promise<any> {
     try {
       const settings = await this.storage.getAmoCrmSettings(userId);
       if (!settings) {
-        throw new Error('AmoCRM settings not found');
+        throw new Error("AmoCRM settings not found");
       }
 
       const apiKey = settings.apiKey;
-      
-      // Нормализация URL
-      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
-      if (!normalizedSubdomain.includes('.amocrm.ru')) {
+
+      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, "");
+      if (!normalizedSubdomain.includes(".amocrm.ru")) {
         normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
       }
       const url = `https://${normalizedSubdomain}/api/v4/leads/${leadId}`;
 
       const response = await fetch(url, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(leadData),
       });
@@ -225,10 +296,22 @@ export class AmoCrmService {
       }
 
       const result = await response.json();
-      await this.logService.log(userId, 'info', 'Сделка обновлена в AmoCRM', { result }, 'sync');
+      await this.logService.log(
+        userId,
+        "info",
+        "Сделка обновлена в AmoCRM",
+        { result },
+        "sync",
+      );
       return result;
     } catch (error) {
-      await this.logService.log(userId, 'error', 'Ошибка при обновлении сделки в AmoCRM', { error }, 'sync');
+      await this.logService.log(
+        userId,
+        "error",
+        "Ошибка при обновлении сделки в AmoCRM",
+        { error },
+        "sync",
+      );
       throw error;
     }
   }
@@ -237,23 +320,22 @@ export class AmoCrmService {
     try {
       const settings = await this.storage.getAmoCrmSettings(userId);
       if (!settings) {
-        throw new Error('AmoCRM settings not found');
+        throw new Error("AmoCRM settings not found");
       }
 
       const apiKey = settings.apiKey;
-      
-      // Нормализация URL
-      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
-      if (!normalizedSubdomain.includes('.amocrm.ru')) {
+
+      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, "");
+      if (!normalizedSubdomain.includes(".amocrm.ru")) {
         normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
       }
       const url = `https://${normalizedSubdomain}/api/v4/contacts`;
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify([contactData]),
       });
@@ -263,10 +345,22 @@ export class AmoCrmService {
       }
 
       const result = await response.json();
-      await this.logService.log(userId, 'info', 'Контакт создан в AmoCRM', { result }, 'sync');
+      await this.logService.log(
+        userId,
+        "info",
+        "Контакт создан в AmoCRM",
+        { result },
+        "sync",
+      );
       return result;
     } catch (error) {
-      await this.logService.log(userId, 'error', 'Ошибка при создании контакта в AmoCRM', { error }, 'sync');
+      await this.logService.log(
+        userId,
+        "error",
+        "Ошибка при создании контакта в AmoCRM",
+        { error },
+        "sync",
+      );
       throw error;
     }
   }

@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { 
+import {
   Settings as SettingsIcon,
   CheckCircle,
   AlertCircle,
@@ -18,7 +24,7 @@ import {
   Eye,
   EyeOff,
   Link,
-  Zap
+  Zap,
 } from "lucide-react";
 
 export default function Settings() {
@@ -27,58 +33,59 @@ export default function Settings() {
   const queryClient = useQueryClient();
 
   const [amoCrmData, setAmoCrmData] = useState({
-    subdomain: '',
-    apiKey: '',
+    subdomain: "",
+    apiKey: "",
   });
   const [lpTrackerData, setLpTrackerData] = useState({
-    projectId: '',
+    projectId: "",
   });
   const [lpTrackerGlobalData, setLpTrackerGlobalData] = useState({
-    login: '',
-    password: '',
-    service: 'CRM Integration',
-    address: 'direct.lptracker.ru',
+    login: "",
+    password: "",
+    service: "CRM Integration",
+    address: "direct.lptracker.ru",
   });
   const [showAmoCrmKey, setShowAmoCrmKey] = useState(false);
   const [showLpTrackerPassword, setShowLpTrackerPassword] = useState(false);
 
   // Fetch settings
   const { data: amoCrmSettings, isLoading: amoCrmLoading } = useQuery({
-    queryKey: ['/api/amocrm/settings'],
+    queryKey: ["/api/amocrm/settings"],
     retry: false,
   });
 
   const { data: lpTrackerSettings, isLoading: lpTrackerLoading } = useQuery({
-    queryKey: ['/api/lptracker/settings'],
+    queryKey: ["/api/lptracker/settings"],
     retry: false,
   });
 
-  const { data: lpTrackerGlobalSettings, isLoading: lpTrackerGlobalLoading } = useQuery({
-    queryKey: ['/api/lptracker/global-settings'],
-    retry: false,
-  });
+  const { data: lpTrackerGlobalSettings, isLoading: lpTrackerGlobalLoading } =
+    useQuery({
+      queryKey: ["/api/lptracker/global-settings"],
+      retry: false,
+    });
 
   const { data: userInfo } = useQuery({
-    queryKey: ['/api/user'],
+    queryKey: ["/api/user"],
     retry: false,
   });
 
   const { data: lpTrackerGlobalStatus } = useQuery({
-    queryKey: ['/api/lptracker/global-status'],
+    queryKey: ["/api/lptracker/global-status"],
     retry: false,
   });
 
   // Mutations
   const saveAmoCrmMutation = useMutation({
     mutationFn: async (data: any) => {
-      await apiRequest('POST', '/api/amocrm/settings', data);
+      await apiRequest("POST", "/api/amocrm/settings", data);
     },
     onSuccess: () => {
       toast({
         title: "Успешно сохранено",
         description: "Настройки AmoCRM обновлены",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/amocrm/settings'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/amocrm/settings"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -102,14 +109,14 @@ export default function Settings() {
 
   const saveLpTrackerMutation = useMutation({
     mutationFn: async (data: any) => {
-      await apiRequest('POST', '/api/lptracker/settings', data);
+      await apiRequest("POST", "/api/lptracker/settings", data);
     },
     onSuccess: () => {
       toast({
         title: "Успешно сохранено",
         description: "Настройки проекта LPTracker обновлены",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/lptracker/settings'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lptracker/settings"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -133,15 +140,19 @@ export default function Settings() {
 
   const saveLpTrackerGlobalMutation = useMutation({
     mutationFn: async (data: any) => {
-      await apiRequest('POST', '/api/lptracker/global-settings', data);
+      await apiRequest("POST", "/api/lptracker/global-settings", data);
     },
     onSuccess: () => {
       toast({
         title: "Успешно сохранено",
         description: "Глобальные настройки LPTracker обновлены",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/lptracker/global-settings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/lptracker/global-status'] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/lptracker/global-settings"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/lptracker/global-status"],
+      });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -165,7 +176,11 @@ export default function Settings() {
 
   const testConnectionMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/amocrm/test-connection', data);
+      const response = await apiRequest(
+        "POST",
+        "/api/amocrm/test-connection",
+        data,
+      );
       return response.json();
     },
     onSuccess: (data) => {
@@ -177,7 +192,9 @@ export default function Settings() {
       } else {
         toast({
           title: "Ошибка подключения к AmoCRM",
-          description: data.message || "API ключ недействителен или истек. Создайте новый долгосрочный API ключ в настройках AmoCRM и убедитесь, что он имеет все необходимые права.",
+          description:
+            data.message ||
+            "API ключ недействителен или истек. Создайте новый долгосрочный API ключ в настройках AmoCRM и убедитесь, что он имеет все необходимые права.",
           variant: "destructive",
         });
       }
@@ -196,7 +213,8 @@ export default function Settings() {
       }
       toast({
         title: "Ошибка",
-        description: "Не удалось проверить подключение. Проверьте интернет соединение.",
+        description:
+          "Не удалось проверить подключение. Проверьте интернет соединение.",
         variant: "destructive",
       });
     },
@@ -204,7 +222,7 @@ export default function Settings() {
 
   const refreshMetadataMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('POST', '/api/amocrm/refresh-metadata');
+      await apiRequest("POST", "/api/amocrm/refresh-metadata");
     },
     onSuccess: () => {
       toast({
@@ -251,8 +269,8 @@ export default function Settings() {
   useEffect(() => {
     if (amoCrmSettings) {
       setAmoCrmData({
-        subdomain: amoCrmSettings.subdomain || '',
-        apiKey: amoCrmSettings.apiKey || '',
+        subdomain: amoCrmSettings.subdomain || "",
+        apiKey: amoCrmSettings.apiKey || "",
       });
     }
   }, [amoCrmSettings]);
@@ -260,7 +278,7 @@ export default function Settings() {
   useEffect(() => {
     if (lpTrackerSettings) {
       setLpTrackerData({
-        projectId: lpTrackerSettings.projectId || '',
+        projectId: lpTrackerSettings.projectId || "",
       });
     }
   }, [lpTrackerSettings]);
@@ -268,10 +286,10 @@ export default function Settings() {
   useEffect(() => {
     if (lpTrackerGlobalSettings) {
       setLpTrackerGlobalData({
-        login: lpTrackerGlobalSettings.login || '',
-        password: lpTrackerGlobalSettings.password || '',
-        service: lpTrackerGlobalSettings.service || 'CRM Integration',
-        address: lpTrackerGlobalSettings.address || 'direct.lptracker.ru',
+        login: lpTrackerGlobalSettings.login || "",
+        password: lpTrackerGlobalSettings.password || "",
+        service: lpTrackerGlobalSettings.service || "CRM Integration",
+        address: lpTrackerGlobalSettings.address || "direct.lptracker.ru",
       });
     }
   }, [lpTrackerGlobalSettings]);
@@ -332,16 +350,24 @@ export default function Settings() {
               </div>
               <div>
                 <CardTitle>AmoCRM</CardTitle>
-                <CardDescription>Настройки подключения к AmoCRM</CardDescription>
+                <CardDescription>
+                  Настройки подключения к AmoCRM
+                </CardDescription>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               {amoCrmSettings?.isActive ? (
-                <Badge variant="default" className="status-indicator status-connected">
+                <Badge
+                  variant="default"
+                  className="status-indicator status-connected"
+                >
                   Активно
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="status-indicator status-disconnected">
+                <Badge
+                  variant="secondary"
+                  className="status-indicator status-disconnected"
+                >
                   Не настроено
                 </Badge>
               )}
@@ -356,7 +382,9 @@ export default function Settings() {
                 <Input
                   id="subdomain"
                   value={amoCrmData.subdomain}
-                  onChange={(e) => setAmoCrmData({ ...amoCrmData, subdomain: e.target.value })}
+                  onChange={(e) =>
+                    setAmoCrmData({ ...amoCrmData, subdomain: e.target.value })
+                  }
                   placeholder="example"
                   required
                 />
@@ -371,7 +399,9 @@ export default function Settings() {
                     id="apiKey"
                     type={showAmoCrmKey ? "text" : "password"}
                     value={amoCrmData.apiKey}
-                    onChange={(e) => setAmoCrmData({ ...amoCrmData, apiKey: e.target.value })}
+                    onChange={(e) =>
+                      setAmoCrmData({ ...amoCrmData, apiKey: e.target.value })
+                    }
                     placeholder="Введите долгосрочный API ключ"
                     required
                   />
@@ -382,14 +412,18 @@ export default function Settings() {
                     className="absolute right-0 top-0 h-full px-3"
                     onClick={() => setShowAmoCrmKey(!showAmoCrmKey)}
                   >
-                    {showAmoCrmKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showAmoCrmKey ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={saveAmoCrmMutation.isPending}
                 className="gradient-primary hover:opacity-90"
               >
@@ -406,7 +440,11 @@ export default function Settings() {
                 type="button"
                 variant="outline"
                 onClick={handleTestConnection}
-                disabled={testConnectionMutation.isPending || !amoCrmData.subdomain || !amoCrmData.apiKey}
+                disabled={
+                  testConnectionMutation.isPending ||
+                  !amoCrmData.subdomain ||
+                  !amoCrmData.apiKey
+                }
               >
                 {testConnectionMutation.isPending ? (
                   <>
@@ -435,7 +473,9 @@ export default function Settings() {
             <Button
               variant="outline"
               onClick={handleRefreshMetadata}
-              disabled={refreshMetadataMutation.isPending || !amoCrmSettings?.isActive}
+              disabled={
+                refreshMetadataMutation.isPending || !amoCrmSettings?.isActive
+              }
             >
               {refreshMetadataMutation.isPending ? (
                 <>
@@ -454,7 +494,7 @@ export default function Settings() {
       </Card>
 
       {/* LPTracker Global Settings (for superuser only) */}
-      {userInfo?.role === 'superuser' && (
+      {userInfo?.role === "superuser" && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -464,16 +504,24 @@ export default function Settings() {
                 </div>
                 <div>
                   <CardTitle>LPTracker - Глобальные настройки</CardTitle>
-                  <CardDescription>Настройки подключения к LPTracker для всех пользователей (только для администратора)</CardDescription>
+                  <CardDescription>
+                    Настройки подключения к LPTracker для всех пользователей
+                  </CardDescription>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 {lpTrackerGlobalSettings?.isActive ? (
-                  <Badge variant="default" className="status-indicator status-connected">
+                  <Badge
+                    variant="default"
+                    className="status-indicator status-connected"
+                  >
                     Настроено
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="status-indicator status-disconnected">
+                  <Badge
+                    variant="secondary"
+                    className="status-indicator status-disconnected"
+                  >
                     Не настроено
                   </Badge>
                 )}
@@ -488,7 +536,12 @@ export default function Settings() {
                   <Input
                     id="lpLogin"
                     value={lpTrackerGlobalData.login}
-                    onChange={(e) => setLpTrackerGlobalData({ ...lpTrackerGlobalData, login: e.target.value })}
+                    onChange={(e) =>
+                      setLpTrackerGlobalData({
+                        ...lpTrackerGlobalData,
+                        login: e.target.value,
+                      })
+                    }
                     placeholder="Введите логин (email)"
                     required
                   />
@@ -500,7 +553,12 @@ export default function Settings() {
                       id="lpPassword"
                       type={showLpTrackerPassword ? "text" : "password"}
                       value={lpTrackerGlobalData.password}
-                      onChange={(e) => setLpTrackerGlobalData({ ...lpTrackerGlobalData, password: e.target.value })}
+                      onChange={(e) =>
+                        setLpTrackerGlobalData({
+                          ...lpTrackerGlobalData,
+                          password: e.target.value,
+                        })
+                      }
                       placeholder="Введите пароль"
                       required
                     />
@@ -509,9 +567,15 @@ export default function Settings() {
                       variant="ghost"
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowLpTrackerPassword(!showLpTrackerPassword)}
+                      onClick={() =>
+                        setShowLpTrackerPassword(!showLpTrackerPassword)
+                      }
                     >
-                      {showLpTrackerPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showLpTrackerPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -520,7 +584,12 @@ export default function Settings() {
                   <Input
                     id="lpService"
                     value={lpTrackerGlobalData.service}
-                    onChange={(e) => setLpTrackerGlobalData({ ...lpTrackerGlobalData, service: e.target.value })}
+                    onChange={(e) =>
+                      setLpTrackerGlobalData({
+                        ...lpTrackerGlobalData,
+                        service: e.target.value,
+                      })
+                    }
                     placeholder="CRM Integration"
                   />
                 </div>
@@ -529,13 +598,18 @@ export default function Settings() {
                   <Input
                     id="lpAddress"
                     value={lpTrackerGlobalData.address}
-                    onChange={(e) => setLpTrackerGlobalData({ ...lpTrackerGlobalData, address: e.target.value })}
+                    onChange={(e) =>
+                      setLpTrackerGlobalData({
+                        ...lpTrackerGlobalData,
+                        address: e.target.value,
+                      })
+                    }
                     placeholder="direct.lptracker.ru"
                   />
                 </div>
               </div>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={saveLpTrackerGlobalMutation.isPending}
                 className="gradient-primary hover:opacity-90"
               >
@@ -563,16 +637,24 @@ export default function Settings() {
               </div>
               <div>
                 <CardTitle>LPTracker - Настройки проекта</CardTitle>
-                <CardDescription>ID проекта для интеграции с LPTracker</CardDescription>
+                <CardDescription>
+                  ID проекта для интеграции с LPTracker
+                </CardDescription>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               {lpTrackerSettings?.projectId ? (
-                <Badge variant="default" className="status-indicator status-connected">
+                <Badge
+                  variant="default"
+                  className="status-indicator status-connected"
+                >
                   Настроено
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="status-indicator status-disconnected">
+                <Badge
+                  variant="secondary"
+                  className="status-indicator status-disconnected"
+                >
                   Не настроено
                 </Badge>
               )}
@@ -587,7 +669,12 @@ export default function Settings() {
                 <Input
                   id="lpProjectId"
                   value={lpTrackerData.projectId}
-                  onChange={(e) => setLpTrackerData({ ...lpTrackerData, projectId: e.target.value })}
+                  onChange={(e) =>
+                    setLpTrackerData({
+                      ...lpTrackerData,
+                      projectId: e.target.value,
+                    })
+                  }
                   placeholder="Введите ID проекта LPTracker"
                   required
                 />
@@ -595,8 +682,8 @@ export default function Settings() {
                   Уникальный идентификатор проекта в системе LPTracker
                 </p>
               </div>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={saveLpTrackerMutation.isPending}
                 className="gradient-primary hover:opacity-90"
               >
@@ -613,13 +700,9 @@ export default function Settings() {
           ) : (
             <div className="text-center py-8">
               <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Глобальные настройки LPTracker не настроены</h3>
-              <p className="text-muted-foreground mb-4">
-                Для настройки проекта LPTracker необходимо обратиться к администратору интеграции для настройки глобальных параметров подключения.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Администратор должен указать логин и пароль от аккаунта LPTracker в глобальных настройках.
-              </p>
+              <h3 className="text-lg font-semibold mb-2">
+                LPTracker не настроен
+              </h3>
             </div>
           )}
         </CardContent>
