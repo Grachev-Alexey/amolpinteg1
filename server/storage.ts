@@ -2,6 +2,7 @@ import {
   users,
   amoCrmSettings,
   lpTrackerSettings,
+  lpTrackerGlobalSettings,
   amoCrmMetadata,
   syncRules,
   fileUploads,
@@ -13,6 +14,8 @@ import {
   type InsertAmoCrmSettings,
   type LpTrackerSettings,
   type InsertLpTrackerSettings,
+  type LpTrackerGlobalSettings,
+  type InsertLpTrackerGlobalSettings,
   type AmoCrmMetadata,
   type InsertAmoCrmMetadata,
   type SyncRule,
@@ -31,6 +34,7 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserForAPI(id: string): Promise<Omit<User, 'password'> | undefined>;
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
 
@@ -40,6 +44,10 @@ export interface IStorage {
   updateAmoCrmSettings(userId: string, settings: Partial<InsertAmoCrmSettings>): Promise<AmoCrmSettings | undefined>;
 
   // LPTracker operations
+  getLpTrackerGlobalSettings(): Promise<LpTrackerGlobalSettings | undefined>;
+  saveLpTrackerGlobalSettings(settings: InsertLpTrackerGlobalSettings): Promise<LpTrackerGlobalSettings>;
+  updateLpTrackerGlobalSettings(settings: Partial<InsertLpTrackerGlobalSettings>): Promise<LpTrackerGlobalSettings | undefined>;
+  
   getLpTrackerSettings(userId: string): Promise<LpTrackerSettings | undefined>;
   saveLpTrackerSettings(settings: InsertLpTrackerSettings): Promise<LpTrackerSettings>;
 
@@ -76,6 +84,27 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    
+    if (user) {
+      // Force object recreation to ensure all properties are enumerable
+      const cleanUser = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        password: user.password,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      };
+      console.log('STORAGE: Clean user role:', cleanUser.role);
+      console.log('STORAGE: All keys:', Object.keys(cleanUser));
+      console.log('STORAGE: Role enumerable?', Object.propertyIsEnumerable.call(cleanUser, 'role'));
+      return cleanUser;
+    }
+    
     return user;
   }
 
@@ -105,6 +134,34 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async getUserForAPI(id: string): Promise<Omit<User, 'password'> | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    
+    if (user) {
+      console.log('STORAGE API: Raw user role:', user.role);
+      console.log('STORAGE API: Raw user keys:', Object.keys(user));
+      
+      // Return object without password for API responses
+      const apiUser = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      };
+      
+      console.log('STORAGE API: API User role:', apiUser.role);
+      console.log('STORAGE API: API User JSON:', JSON.stringify(apiUser));
+      return apiUser;
+    }
+    
+    return undefined;
   }
 
   // AmoCRM operations
@@ -141,6 +198,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   // LPTracker operations
+  async getLpTrackerGlobalSettings(): Promise<LpTrackerGlobalSettings | undefined> {
+    const [settings] = await db.select().from(lpTrackerGlobalSettings).limit(1);
+    return settings;
+  }
+
+  async saveLpTrackerGlobalSettings(settings: InsertLpTrackerGlobalSettings): Promise<LpTrackerGlobalSettings> {
+    const [savedSettings] = await db
+      .insert(lpTrackerGlobalSettings)
+      .values(settings)
+      .returning();
+    return savedSettings;
+  }
+
+  async updateLpTrackerGlobalSettings(settings: Partial<InsertLpTrackerGlobalSettings>): Promise<LpTrackerGlobalSettings | undefined> {
+    const [existingSettings] = await db.select().from(lpTrackerGlobalSettings).limit(1);
+    if (!existingSettings) return undefined;
+
+    const [updatedSettings] = await db
+      .update(lpTrackerGlobalSettings)
+      .set({
+        ...settings,
+        updatedAt: new Date(),
+      })
+      .where(eq(lpTrackerGlobalSettings.id, existingSettings.id))
+      .returning();
+
+    return updatedSettings;
+  }
+
   async getLpTrackerSettings(userId: string): Promise<LpTrackerSettings | undefined> {
     const [settings] = await db
       .select()

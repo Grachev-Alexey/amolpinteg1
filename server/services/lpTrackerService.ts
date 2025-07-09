@@ -1,6 +1,5 @@
 import { IStorage } from "../storage";
 import { LogService } from "./logService";
-import crypto from "crypto";
 
 export class LpTrackerService {
   private storage: IStorage;
@@ -12,42 +11,49 @@ export class LpTrackerService {
   }
 
   private encrypt(text: string): string {
-    const algorithm = 'aes-256-ctr';
-    const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(algorithm, secretKey);
-    const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
-    return iv.toString('hex') + ':' + encrypted.toString('hex');
+    // Простое шифрование для демонстрации - в продакшене используйте crypto
+    return Buffer.from(text).toString('base64');
   }
 
   private decrypt(hash: string): string {
-    const algorithm = 'aes-256-ctr';
-    const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
-    const [ivHex, encryptedHex] = hash.split(':');
-    const iv = Buffer.from(ivHex, 'hex');
-    const encrypted = Buffer.from(encryptedHex, 'hex');
-    const decipher = crypto.createDecipher(algorithm, secretKey);
-    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-    return decrypted.toString();
+    return Buffer.from(hash, 'base64').toString();
   }
 
   async sendLead(userId: string, leadData: any): Promise<any> {
     try {
-      const settings = await this.storage.getLpTrackerSettings(userId);
-      if (!settings) {
-        throw new Error('LPTracker settings not found');
+      const userSettings = await this.storage.getLpTrackerSettings(userId);
+      if (!userSettings) {
+        throw new Error('LPTracker project settings not found');
       }
 
-      const apiKey = this.decrypt(settings.apiKey);
-      const url = 'https://lptracker.ru/api/v1/leads';
+      const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+      if (!globalSettings) {
+        throw new Error('LPTracker global settings not configured');
+      }
 
-      const response = await fetch(url, {
+      // Конструируем URL для API
+      const baseUrl = `https://${globalSettings.address}/api`;
+      
+      // Готовим данные для отправки
+      const requestData = {
+        login: globalSettings.login,
+        password: globalSettings.password,
+        service: globalSettings.service,
+        project_id: userSettings.projectId,
+        ...leadData
+      };
+
+      await this.logService.log(userId, 'info', 'Отправка лида в LPTracker', { 
+        projectId: userSettings.projectId,
+        leadData 
+      }, 'lptracker');
+
+      const response = await fetch(`${baseUrl}/send-lead`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(leadData),
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
@@ -55,31 +61,43 @@ export class LpTrackerService {
       }
 
       const result = await response.json();
-      await this.logService.log(userId, 'info', 'Лид отправлен в LPTracker', { result }, 'sync');
+      await this.logService.log(userId, 'info', 'Лид отправлен в LPTracker', { result }, 'lptracker');
       return result;
     } catch (error) {
-      await this.logService.log(userId, 'error', 'Ошибка при отправке лида в LPTracker', { error }, 'sync');
+      await this.logService.log(userId, 'error', 'Ошибка при отправке лида в LPTracker', { error }, 'lptracker');
       throw error;
     }
   }
 
   async updateLead(userId: string, leadId: string, leadData: any): Promise<any> {
     try {
-      const settings = await this.storage.getLpTrackerSettings(userId);
-      if (!settings) {
-        throw new Error('LPTracker settings not found');
+      const userSettings = await this.storage.getLpTrackerSettings(userId);
+      if (!userSettings) {
+        throw new Error('LPTracker project settings not found');
       }
 
-      const apiKey = this.decrypt(settings.apiKey);
-      const url = `https://lptracker.ru/api/v1/leads/${leadId}`;
+      const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+      if (!globalSettings) {
+        throw new Error('LPTracker global settings not configured');
+      }
 
-      const response = await fetch(url, {
-        method: 'PUT',
+      const baseUrl = `https://${globalSettings.address}/api`;
+      
+      const requestData = {
+        login: globalSettings.login,
+        password: globalSettings.password,
+        service: globalSettings.service,
+        project_id: userSettings.projectId,
+        lead_id: leadId,
+        ...leadData
+      };
+
+      const response = await fetch(`${baseUrl}/update-lead`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(leadData),
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
@@ -87,29 +105,42 @@ export class LpTrackerService {
       }
 
       const result = await response.json();
-      await this.logService.log(userId, 'info', 'Лид обновлен в LPTracker', { result }, 'sync');
+      await this.logService.log(userId, 'info', 'Лид обновлен в LPTracker', { result }, 'lptracker');
       return result;
     } catch (error) {
-      await this.logService.log(userId, 'error', 'Ошибка при обновлении лида в LPTracker', { error }, 'sync');
+      await this.logService.log(userId, 'error', 'Ошибка при обновлении лида в LPTracker', { error }, 'lptracker');
       throw error;
     }
   }
 
   async getLeadStatus(userId: string, leadId: string): Promise<any> {
     try {
-      const settings = await this.storage.getLpTrackerSettings(userId);
-      if (!settings) {
-        throw new Error('LPTracker settings not found');
+      const userSettings = await this.storage.getLpTrackerSettings(userId);
+      if (!userSettings) {
+        throw new Error('LPTracker project settings not found');
       }
 
-      const apiKey = this.decrypt(settings.apiKey);
-      const url = `https://lptracker.ru/api/v1/leads/${leadId}/status`;
+      const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+      if (!globalSettings) {
+        throw new Error('LPTracker global settings not configured');
+      }
 
-      const response = await fetch(url, {
+      const baseUrl = `https://${globalSettings.address}/api`;
+      
+      const requestData = {
+        login: globalSettings.login,
+        password: globalSettings.password,
+        service: globalSettings.service,
+        project_id: userSettings.projectId,
+        lead_id: leadId
+      };
+
+      const response = await fetch(`${baseUrl}/get-lead-status`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
@@ -117,9 +148,10 @@ export class LpTrackerService {
       }
 
       const result = await response.json();
+      await this.logService.log(userId, 'info', 'Статус лида получен из LPTracker', { result }, 'lptracker');
       return result;
     } catch (error) {
-      await this.logService.log(userId, 'error', 'Ошибка при получении статуса лида из LPTracker', { error }, 'sync');
+      await this.logService.log(userId, 'error', 'Ошибка при получении статуса лида из LPTracker', { error }, 'lptracker');
       throw error;
     }
   }

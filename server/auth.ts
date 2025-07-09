@@ -1,6 +1,6 @@
 import { Express } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
@@ -23,10 +23,24 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  // Для обратной совместимости проверяем разные методы
+  try {
+    // Проверяем SHA256 (для суперпользователя)
+    if (stored.length === 64 && !stored.includes('.')) {
+      const hashedSupplied = createHash('sha256').update(supplied).digest('hex');
+      return hashedSupplied === stored;
+    }
+    
+    // Оригинальный метод scrypt
+    const [hashed, salt] = stored.split(".");
+    if (!hashed || !salt) return false;
+    
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch {
+    return false;
+  }
 }
 
 export async function setupAuth(app: Express) {

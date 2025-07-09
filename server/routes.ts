@@ -1,6 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { setupAuth } from "./auth";
 import { AmoCrmService } from "./services/amoCrmService";
 import { LpTrackerService } from "./services/lpTrackerService";
@@ -10,6 +13,7 @@ import { LogService } from "./services/logService";
 import { insertAmoCrmSettingsSchema, insertLpTrackerSettingsSchema, insertSyncRuleSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import multer from "multer";
+import { setupDebugRoutes } from "./debugRoutes";
 
 const upload = multer({ dest: "uploads/" });
 
@@ -31,6 +35,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const webhookService = new WebhookService(storage);
   const fileService = new FileService(storage);
   const logService = new LogService(storage);
+
+  // Setup debug routes
+  setupDebugRoutes(app);
+
+
+
+  // Simple user endpoint that MUST include role
+  app.get('/api/user', requireAuth, async (req: any, res) => {
+    const userId = req.session.userId;
+    const user = await storage.getUser(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    // Manual object with forced role
+    res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileImageUrl: user.profileImageUrl,
+      role: user.role || 'user', // FORCE ROLE WITH FALLBACK
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    });
+  });
 
   // AmoCRM settings routes
   app.get('/api/amocrm/settings', requireAuth, async (req: any, res) => {
@@ -130,35 +159,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // LPTracker settings routes
+  // LPTracker Global Settings (for superuser only)
+  app.post('/api/lptracker/global-settings', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'superuser') {
+        return res.status(403).json({ message: 'Доступ запрещен. Требуется роль суперпользователя.' });
+      }
+
+      const { login, password, service, address } = req.body;
+      
+      if (!login || !password) {
+        return res.status(400).json({ message: 'Логин и пароль обязательны' });
+      }
+
+      const existingSettings = await storage.getLpTrackerGlobalSettings();
+      
+      let settings;
+      if (existingSettings) {
+        settings = await storage.updateLpTrackerGlobalSettings({
+          login,
+          password,
+          service: service || 'CRM Integration',
+          address: address || 'direct.lptracker.ru',
+        });
+      } else {
+        settings = await storage.saveLpTrackerGlobalSettings({
+          login,
+          password,
+          service: service || 'CRM Integration',
+          address: address || 'direct.lptracker.ru',
+        });
+      }
+      
+      await logService.log(userId, 'info', 'Глобальные настройки LPTracker сохранены', {}, 'settings');
+      res.json(settings);
+    } catch (error) {
+      console.error('Error saving LPTracker global settings:', error);
+      res.status(500).json({ message: 'Не удалось сохранить глобальные настройки LPTracker' });
+    }
+  });
+
+  app.get('/api/lptracker/global-settings', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'superuser') {
+        return res.status(403).json({ message: 'Доступ запрещен. Требуется роль суперпользователя.' });
+      }
+
+      const settings = await storage.getLpTrackerGlobalSettings();
+      res.json(settings || {});
+    } catch (error) {
+      console.error('Error getting LPTracker global settings:', error);
+      res.status(500).json({ message: 'Не удалось получить глобальные настройки LPTracker' });
+    }
+  });
+
+  // LPTracker User Settings (project ID only)
+  app.post('/api/lptracker/settings', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { projectId } = req.body;
+      
+      if (!projectId) {
+        return res.status(400).json({ message: 'ID проекта обязателен' });
+      }
+
+      const settings = await storage.saveLpTrackerSettings({
+        userId,
+        projectId,
+      });
+      
+      await logService.log(userId, 'info', 'Настройки проекта LPTracker сохранены', { settings }, 'settings');
+      res.json(settings);
+    } catch (error) {
+      console.error('Error saving LPTracker settings:', error);
+      res.status(500).json({ message: 'Не удалось сохранить настройки LPTracker' });
+    }
+  });
+
   app.get('/api/lptracker/settings', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const settings = await storage.getLpTrackerSettings(userId);
-      res.json(settings);
+      res.json(settings || {});
     } catch (error) {
-      console.error("Error fetching LPTracker settings:", error);
-      res.status(500).json({ message: "Не удалось получить настройки LPTracker" });
+      console.error('Error getting LPTracker settings:', error);
+      res.status(500).json({ message: 'Не удалось получить настройки LPTracker' });
     }
   });
 
-  app.post('/api/lptracker/settings', requireAuth, async (req: any, res) => {
+  // Check if LPTracker is configured globally
+  app.get('/api/lptracker/global-status', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.session.userId;
-      const validatedData = insertLpTrackerSettingsSchema.parse({
-        ...req.body,
-        userId,
-      });
-      
-      const settings = await storage.saveLpTrackerSettings(validatedData);
-      await logService.log(userId, 'info', 'Настройки LPTracker сохранены', { settings }, 'settings');
-      res.json(settings);
+      const globalSettings = await storage.getLpTrackerGlobalSettings();
+      res.json({ configured: !!globalSettings });
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Некорректные данные", errors: error.errors });
-      }
-      console.error("Error saving LPTracker settings:", error);
-      res.status(500).json({ message: "Не удалось сохранить настройки LPTracker" });
+      console.error('Error checking LPTracker global status:', error);
+      res.status(500).json({ message: 'Не удалось проверить статус LPTracker' });
     }
   });
 

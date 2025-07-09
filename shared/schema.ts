@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  role: varchar("role").default("user").notNull(), // 'user' | 'superuser'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -47,11 +48,23 @@ export const amoCrmSettings = pgTable("amocrm_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// LPTracker connection settings
+// LPTracker global settings (for superuser only)
+export const lpTrackerGlobalSettings = pgTable("lptracker_global_settings", {
+  id: serial("id").primaryKey(),
+  login: varchar("login").notNull(), // Email/username for LPTracker
+  password: text("password").notNull(), // Password for LPTracker
+  service: varchar("service").default("CRM Integration").notNull(), // Service name for logging
+  address: varchar("address").default("direct.lptracker.ru").notNull(), // API server address
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// LPTracker project settings (for each user)
 export const lpTrackerSettings = pgTable("lptracker_settings", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().unique().references(() => users.id),
-  apiKey: text("api_key").notNull(), // encrypted
+  projectId: varchar("project_id").notNull(), // LPTracker project ID
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -130,6 +143,9 @@ export type User = typeof users.$inferSelect;
 export type InsertAmoCrmSettings = typeof amoCrmSettings.$inferInsert;
 export type AmoCrmSettings = typeof amoCrmSettings.$inferSelect;
 
+export type InsertLpTrackerGlobalSettings = typeof lpTrackerGlobalSettings.$inferInsert;
+export type LpTrackerGlobalSettings = typeof lpTrackerGlobalSettings.$inferSelect;
+
 export type InsertLpTrackerSettings = typeof lpTrackerSettings.$inferInsert;
 export type LpTrackerSettings = typeof lpTrackerSettings.$inferSelect;
 
@@ -150,6 +166,12 @@ export type SystemLog = typeof systemLogs.$inferSelect;
 
 // Insert schemas
 export const insertAmoCrmSettingsSchema = createInsertSchema(amoCrmSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLpTrackerGlobalSettingsSchema = createInsertSchema(lpTrackerGlobalSettings).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
