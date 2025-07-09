@@ -1,0 +1,30 @@
+4:33:41 PM [express] GET /api/user 304 in 44ms :: {"id":"xoo7wy209bo","username":"grachev","email":"…
+4:33:43 PM [express] GET /api/amocrm/settings 200 in 45ms
+4:33:43 PM [express] GET /api/lptracker/settings 200 in 184ms
+[INFO] Настройки AmoCRM сохранены {
+  "settings": {
+    "id": 3,
+    "userId": "xoo7wy209bo",
+    "subdomain": "https://wuuuu.amocrm.ru",
+    "apiKey": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImIxZmIwMmViOTU5YTQyY2JlOWRkNDMyMjE0OTZmZjcxN2M4YmZkYWRmZWNiZDU3ZDk4OWVlODQ1MDcyMjQ1OTZlNDkzYzhmOTYxOTAzMDEyIn0.eyJhdWQiOiI5MWI3ZWQwNS01MWVlLTQ1MzEtOTVlMS04ZTc5YWI2MjFjMjMiLCJqdGkiOiJiMWZiMDJlYjk1OWE0MmNiZTlkZDQzMjIxNDk2ZmY3MTdjOGJmZGFkZmVjYmQ1N2Q5ODllZTg0NTA3MjI0NTk2ZTQ5M2M4Zjk2MTkwMzAxMiIsImlhdCI6MTc1MjA3ODQzNywibmJmIjoxNzUyMDc4NDM3LCJleHAiOjE4MDQyOTEyMDAsInN1YiI6IjEwNTU3MjU0IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjE4NTcyMzQxLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJjcm0iLCJmaWxlcyIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiLCJwdXNoX25vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiYmU4MGJiZGItOTNlYi00NGNlLWFmNmQtZGU0YWI3Yzg5NjY2IiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.ILq73J3uwLnCsH-IrBGvtduN0Nzx8SQqKMqMA_KoF2JWOqADXqofuZUP6my1lpBhjEkfoln8bmWJ6DdtSRJ5636GhD-v9NnDC-IDLz5p6QXfOE6mTcJbqRzDrt9t7JKj370bpdFoXX5SppHWDm7WREZH3DvbLjAn3BJtPVxn0DeiY8Q3aZVJEepIW2Fi8PpXtGU440XLgc3Tk1hqDPNkFe3Cqk-MSj1T8bepf3cLIKWTwd6Y4WXN1bdFU3PtmrVorJq6B7MObEiP_azbqrKmzfuWTr6O8Ewo0s4c7KrIpNyJ7IhIjImNXNJrISHlSqtPXuukNZ36tDYO5eZ0n1G0hA",
+    "isActive": true,
+    "createdAt": "2025-07-09T16:33:57.493Z",
+    "updatedAt": "2025-07-09T16:33:57.493Z"
+  }
+}
+4:33:57 PM [express] POST /api/amocrm/settings 200 in 227ms :: {"id":3,"userId":"xoo7wy209bo","subdo…
+4:33:57 PM [express] GET /api/amocrm/settings 200 in 43ms :: {"id":3,"userId":"xoo7wy209bo","subdoma…
+AmoCRM connection test failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:13392:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async AmoCrmService.testConnection (/home/runner/workspace/server/services/amoCrmService.ts:37:24)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:72:23) {
+  [cause]: Error: getaddrinfo ENOTFOUND https
+      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'https'
+  }
+}
+4:33:58 PM [express] POST /api/amocrm/test-connection 200 in 33ms :: {"isValid":false}

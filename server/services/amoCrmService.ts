@@ -33,7 +33,13 @@ export class AmoCrmService {
 
   async testConnection(subdomain: string, apiKey: string): Promise<boolean> {
     try {
-      const url = `https://${subdomain}.amocrm.ru/api/v4/account`;
+      // Нормализация URL - убираем https:// если есть и добавляем .amocrm.ru если нет
+      let baseUrl = subdomain.replace(/^https?:\/\//, '');
+      if (!baseUrl.includes('.amocrm.ru')) {
+        baseUrl = `${baseUrl}.amocrm.ru`;
+      }
+      const url = `https://${baseUrl}/api/v4/account`;
+      
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -56,7 +62,13 @@ export class AmoCrmService {
       }
 
       const apiKey = this.decrypt(settings.apiKey);
-      const baseUrl = `https://${settings.subdomain}.amocrm.ru/api/v4`;
+      
+      // Нормализация URL - убираем https:// если есть и добавляем .amocrm.ru если нет
+      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
+      if (!normalizedSubdomain.includes('.amocrm.ru')) {
+        normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
+      }
+      const baseUrl = `https://${normalizedSubdomain}/api/v4`;
 
       // Получение воронок
       const pipelinesResponse = await fetch(`${baseUrl}/leads/pipelines`, {
@@ -124,7 +136,13 @@ export class AmoCrmService {
       }
 
       const apiKey = this.decrypt(settings.apiKey);
-      const url = `https://${settings.subdomain}.amocrm.ru/api/v4/leads`;
+      
+      // Нормализация URL
+      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
+      if (!normalizedSubdomain.includes('.amocrm.ru')) {
+        normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
+      }
+      const url = `https://${normalizedSubdomain}/api/v4/leads`;
 
       const response = await fetch(url, {
         method: 'POST',
@@ -156,7 +174,13 @@ export class AmoCrmService {
       }
 
       const apiKey = this.decrypt(settings.apiKey);
-      const url = `https://${settings.subdomain}.amocrm.ru/api/v4/leads/${leadId}`;
+      
+      // Нормализация URL
+      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
+      if (!normalizedSubdomain.includes('.amocrm.ru')) {
+        normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
+      }
+      const url = `https://${normalizedSubdomain}/api/v4/leads/${leadId}`;
 
       const response = await fetch(url, {
         method: 'PATCH',
@@ -188,7 +212,13 @@ export class AmoCrmService {
       }
 
       const apiKey = this.decrypt(settings.apiKey);
-      const url = `https://${settings.subdomain}.amocrm.ru/api/v4/contacts`;
+      
+      // Нормализация URL
+      let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
+      if (!normalizedSubdomain.includes('.amocrm.ru')) {
+        normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
+      }
+      const url = `https://${normalizedSubdomain}/api/v4/contacts`;
 
       const response = await fetch(url, {
         method: 'POST',
