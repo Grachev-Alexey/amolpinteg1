@@ -1,6 +1,5 @@
 import { IStorage } from "../storage";
 import { LogService } from "./logService";
-import crypto from "crypto";
 
 export class AmoCrmService {
   private storage: IStorage;
@@ -9,46 +8,6 @@ export class AmoCrmService {
   constructor(storage: IStorage) {
     this.storage = storage;
     this.logService = new LogService(storage);
-  }
-
-  public encryptApiKey(text: string): string {
-    return this.encrypt(text);
-  }
-
-  public decryptApiKey(hash: string): string {
-    return this.decrypt(hash);
-  }
-
-  private encrypt(text: string): string {
-    const algorithm = 'aes-256-ctr';
-    const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
-    const key = crypto.scryptSync(secretKey, 'salt', 32);
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(algorithm, key);
-    const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
-    return iv.toString('hex') + ':' + encrypted.toString('hex');
-  }
-
-  private decrypt(hash: string): string {
-    // Проверяем, зашифрован ли ключ (содержит ли двоеточие)
-    if (!hash || !hash.includes(':')) {
-      return hash; // Возвращаем как есть, если не зашифрован
-    }
-    
-    try {
-      const algorithm = 'aes-256-ctr';
-      const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-32-chars-long';
-      const key = crypto.scryptSync(secretKey, 'salt', 32);
-      const [ivHex, encryptedHex] = hash.split(':');
-      const iv = Buffer.from(ivHex, 'hex');
-      const encrypted = Buffer.from(encryptedHex, 'hex');
-      const decipher = crypto.createDecipher(algorithm, key);
-      const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-      return decrypted.toString();
-    } catch (error) {
-      console.error('Decryption failed:', error);
-      return hash; // Возвращаем как есть в случае ошибки
-    }
   }
 
   async testConnection(subdomain: string, apiKey: string): Promise<boolean> {
@@ -96,7 +55,7 @@ export class AmoCrmService {
         throw new Error('AmoCRM settings not found');
       }
 
-      const apiKey = this.decrypt(settings.apiKey);
+      const apiKey = settings.apiKey;
       
       // Нормализация URL - убираем https:// если есть и добавляем .amocrm.ru если нет
       let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
@@ -205,7 +164,7 @@ export class AmoCrmService {
         throw new Error('AmoCRM settings not found');
       }
 
-      const apiKey = this.decrypt(settings.apiKey);
+      const apiKey = settings.apiKey;
       
       // Нормализация URL
       let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
@@ -243,7 +202,7 @@ export class AmoCrmService {
         throw new Error('AmoCRM settings not found');
       }
 
-      const apiKey = this.decrypt(settings.apiKey);
+      const apiKey = settings.apiKey;
       
       // Нормализация URL
       let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');
@@ -281,7 +240,7 @@ export class AmoCrmService {
         throw new Error('AmoCRM settings not found');
       }
 
-      const apiKey = this.decrypt(settings.apiKey);
+      const apiKey = settings.apiKey;
       
       // Нормализация URL
       let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, '');

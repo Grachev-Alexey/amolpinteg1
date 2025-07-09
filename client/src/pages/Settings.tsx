@@ -199,7 +199,7 @@ export default function Settings() {
     if (amoCrmSettings) {
       setAmoCrmData({
         subdomain: amoCrmSettings.subdomain || '',
-        apiKey: '', // Не показываем зашифрованный ключ, пользователь должен ввести новый
+        apiKey: amoCrmSettings.apiKey || '',
       });
     }
   }, [amoCrmSettings]);
@@ -303,8 +303,8 @@ export default function Settings() {
                     type={showAmoCrmKey ? "text" : "password"}
                     value={amoCrmData.apiKey}
                     onChange={(e) => setAmoCrmData({ ...amoCrmData, apiKey: e.target.value })}
-                    placeholder={amoCrmSettings?.apiKey ? "API ключ сохранен - введите новый для изменения" : "Введите долгосрочный API ключ"}
-                    required={!amoCrmSettings?.apiKey}
+                    placeholder="Введите долгосрочный API ключ"
+                    required
                   />
                   <Button
                     type="button"
@@ -337,7 +337,7 @@ export default function Settings() {
                 type="button"
                 variant="outline"
                 onClick={handleTestConnection}
-                disabled={testConnectionMutation.isPending || !amoCrmData.subdomain || (!amoCrmData.apiKey && !amoCrmSettings?.apiKey)}
+                disabled={testConnectionMutation.isPending || !amoCrmData.subdomain || !amoCrmData.apiKey}
               >
                 {testConnectionMutation.isPending ? (
                   <>

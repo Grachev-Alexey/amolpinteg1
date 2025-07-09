@@ -52,12 +52,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
       });
       
-      // Шифруем API-ключ перед сохранением
-      const encryptedData = {
-        ...validatedData,
-        apiKey: await amoCrmService.encryptApiKey(validatedData.apiKey)
-      };
-      const settings = await storage.saveAmoCrmSettings(encryptedData);
+      // Сохраняем настройки без шифрования
+      const settings = await storage.saveAmoCrmSettings(validatedData);
       await logService.log(userId, 'info', 'Настройки AmoCRM сохранены', { settings }, 'settings');
       res.json(settings);
     } catch (error) {
@@ -80,9 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!apiKey) {
         const settings = await storage.getAmoCrmSettings(userId);
         if (settings && settings.apiKey) {
-          apiKey = amoCrmService.decryptApiKey(settings.apiKey);
+          apiKey = settings.apiKey;
           subdomain = settings.subdomain;
-          console.log('Using saved encrypted API key for testing');
+          console.log('Using saved API key for testing');
         }
       }
       
