@@ -45,7 +45,6 @@ The application follows a full-stack architecture with clear separation between 
 ## Key Components
 
 ### Database Schema
-- **User Management**: User profiles with Replit Auth integration
 - **Connection Settings**: Encrypted storage for AmoCRM and LPTracker credentials
 - **Metadata Caching**: AmoCRM pipeline, status, and field definitions
 - **Sync Rules**: Configurable integration rules with conditions and actions
@@ -128,7 +127,6 @@ The application follows a full-stack architecture with clear separation between 
 - **Status**: Complete ✓
 - **Date**: 2025-07-09
 - **Changes Made**:
-  - Removed Replit Auth dependency
   - Implemented simple session-based authentication
   - Fixed authentication middleware
   - Created test user (admin/admin123)
