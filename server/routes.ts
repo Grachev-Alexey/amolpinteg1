@@ -26,6 +26,23 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+function requireSuperuser(req: any, res: any, next: any) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  // Get user and check role
+  storage.getUser(req.session.userId).then(user => {
+    if (!user || user.role !== "superuser") {
+      return res.status(403).json({ message: "Superuser access required" });
+    }
+    req.user = user;
+    next();
+  }).catch(err => {
+    console.error("Error checking user role:", err);
+    res.status(500).json({ message: "Server error" });
+  });
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -442,6 +459,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
       res.status(500).json({ message: "Не удалось получить статистику панели управления" });
+    }
+  });
+
+  // Admin routes
+  app.get('/api/admin/users', requireSuperuser, async (req: any, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      res.json(allUsers.map(user => ({
+        ...user,
+        password: undefined // Never send passwords
+      })));
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Не удалось получить список пользователей" });
+    }
+  });
+
+  app.post('/api/admin/users', requireSuperuser, async (req: any, res) => {
+    try {
+      const { username, email, password, firstName, lastName, role } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Имя пользователя и пароль обязательны" });
+      }
+
+      const user = await storage.createUser({
+        id: Math.random().toString(36).substring(2, 15),
+        username,
+        email,
+        password,
+        firstName,
+        lastName,
+        role: role || 'user',
+      });
+
+      res.json({
+        ...user,
+        password: undefined
+      });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Не удалось создать пользователя" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id', requireSuperuser, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { username, email, firstName, lastName, role } = req.body;
+      
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+
+      const updatedUser = await storage.upsertUser({
+        id,
+        username: username || existingUser.username,
+        email: email || existingUser.email,
+        firstName: firstName || existingUser.firstName,
+        lastName: lastName || existingUser.lastName,
+        role: role || existingUser.role,
+        password: existingUser.password, // Keep existing password
+      });
+
+      res.json({
+        ...updatedUser,
+        password: undefined
+      });
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Не удалось обновить пользователя" });
+    }
+  });
+
+  app.delete('/api/admin/users/:id', requireSuperuser, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if user exists and is not a superuser
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ message: "Пользователь не найден" });
+      }
+      
+      if (existingUser.role === 'superuser') {
+        return res.status(400).json({ message: "Нельзя удалить администратора" });
+      }
+
+      await db.delete(users).where(eq(users.id, id));
+      res.json({ message: "Пользователь удален" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Не удалось удалить пользователя" });
+    }
+  });
+
+  app.get('/api/admin/stats', requireSuperuser, async (req: any, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      const allLogs = await storage.getSystemLogs();
+      
+      const stats = {
+        totalUsers: allUsers.length,
+        activeUsers: allUsers.filter(u => u.role !== 'superuser').length,
+        totalIntegrations: 0, // TODO: Calculate from settings
+        activeIntegrations: 0, // TODO: Calculate from settings
+        totalSyncs: 0, // TODO: Calculate from logs
+        totalErrors: allLogs.filter(l => l.level === 'error').length,
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ message: "Не удалось получить статистику" });
+    }
+  });
+
+  app.get('/api/admin/logs', requireSuperuser, async (req: any, res) => {
+    try {
+      const logs = await storage.getSystemLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching admin logs:", error);
+      res.status(500).json({ message: "Не удалось получить логи" });
+    }
+  });
+
+  app.get('/api/admin/lptracker-settings', requireSuperuser, async (req: any, res) => {
+    try {
+      const settings = await storage.getLpTrackerGlobalSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching LPTracker settings:", error);
+      res.status(500).json({ message: "Не удалось получить настройки LPTracker" });
+    }
+  });
+
+  app.post('/api/admin/lptracker-settings', requireSuperuser, async (req: any, res) => {
+    try {
+      const { login, password, service, address, isActive } = req.body;
+      
+      const settings = await storage.saveLpTrackerGlobalSettings({
+        login,
+        password,
+        service: service || 'CRM Integration',
+        address: address || 'direct.lptracker.ru',
+        isActive: isActive !== false,
+      });
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Error saving LPTracker settings:", error);
+      res.status(500).json({ message: "Не удалось сохранить настройки LPTracker" });
+    }
+  });
+
+  app.get('/api/admin/system-settings', requireSuperuser, async (req: any, res) => {
+    try {
+      // Mock system settings - in real app these would be in database
+      const settings = {
+        maxFileSize: 10,
+        allowRegistration: true,
+        sessionTimeout: 24,
+        logRetentionDays: 30,
+        maintenanceMode: false,
+        maintenanceMessage: "Система временно недоступна",
+      };
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching system settings:", error);
+      res.status(500).json({ message: "Не удалось получить системные настройки" });
+    }
+  });
+
+  app.post('/api/admin/system-settings', requireSuperuser, async (req: any, res) => {
+    try {
+      // Mock save - in real app these would be saved to database
+      const settings = req.body;
+      res.json(settings);
+    } catch (error) {
+      console.error("Error saving system settings:", error);
+      res.status(500).json({ message: "Не удалось сохранить системные настройки" });
     }
   });
 

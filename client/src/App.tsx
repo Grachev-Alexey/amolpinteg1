@@ -14,9 +14,13 @@ import FileUpload from "@/pages/FileUpload";
 import CallResults from "@/pages/CallResults";
 import Logs from "@/pages/Logs";
 import Layout from "@/components/Layout";
+import AdminLayout from "@/components/AdminLayout";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import UserManagement from "@/pages/admin/UserManagement";
+import SystemSettings from "@/pages/admin/SystemSettings";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -31,11 +35,19 @@ function Router() {
 
   return (
     <Switch>
-      {!isAuthenticated ? (
+      {!user ? (
         <>
           <Route path="/" component={Landing} />
           <Route path="/auth" component={AuthPage} />
         </>
+      ) : user.role === "superuser" ? (
+        <AdminLayout>
+          <Route path="/" component={AdminDashboard} />
+          <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin/users" component={UserManagement} />
+          <Route path="/admin/settings" component={SystemSettings} />
+          <Route path="/admin/logs" component={Logs} />
+        </AdminLayout>
       ) : (
         <Layout>
           <Route path="/" component={Home} />

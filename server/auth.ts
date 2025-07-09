@@ -92,6 +92,7 @@ export async function setupAuth(app: Express) {
         firstName: user.firstName,
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
+        role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       });
@@ -121,6 +122,7 @@ export async function setupAuth(app: Express) {
         firstName: user.firstName,
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
+        role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       });
@@ -154,6 +156,7 @@ export async function setupAuth(app: Express) {
         firstName: user.firstName,
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
+        role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       });
