@@ -1,6 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Home, 
   Settings, 
@@ -24,6 +26,15 @@ const navigationItems = [
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/logout");
+    },
+    onSuccess: () => {
+      window.location.href = "/";
+    },
+  });
 
   return (
     <div className="sidebar-gradient w-64 fixed left-0 top-0 h-full z-50 border-r border-border/40">
@@ -77,7 +88,8 @@ export default function Sidebar() {
           <Button 
             variant="ghost" 
             size="sm"
-            onClick={() => window.location.href = "/api/logout"}
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
             className="text-muted-foreground hover:text-foreground"
           >
             <LogOut className="w-4 h-4" />

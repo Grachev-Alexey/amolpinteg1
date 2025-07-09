@@ -181,7 +181,7 @@ export default function Landing() {
             </p>
             <Button 
               size="lg" 
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => window.location.href = '/auth'}
               className="gradient-primary hover:opacity-90"
             >
               Войти в систему

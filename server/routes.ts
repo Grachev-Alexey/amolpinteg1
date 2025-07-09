@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./auth";
 import { AmoCrmService } from "./services/amoCrmService";
 import { LpTrackerService } from "./services/lpTrackerService";
 import { WebhookService } from "./services/webhookService";
@@ -13,6 +13,14 @@ import multer from "multer";
 
 const upload = multer({ dest: "uploads/" });
 
+// Authentication middleware
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.requireAuth()) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -23,22 +31,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const fileService = new FileService(storage);
   const logService = new LogService(storage);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Не удалось получить данные пользователя" });
-    }
-  });
-
   // AmoCRM settings routes
-  app.get('/api/amocrm/settings', isAuthenticated, async (req: any, res) => {
+  app.get('/api/amocrm/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const settings = await storage.getAmoCrmSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -47,9 +43,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/amocrm/settings', isAuthenticated, async (req: any, res) => {
+  app.post('/api/amocrm/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertAmoCrmSettingsSchema.parse({
         ...req.body,
         userId,
@@ -67,9 +63,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/amocrm/test-connection', isAuthenticated, async (req: any, res) => {
+  app.post('/api/amocrm/test-connection', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { subdomain, apiKey } = req.body;
       
       const isValid = await amoCrmService.testConnection(subdomain, apiKey);
@@ -80,9 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/amocrm/refresh-metadata', isAuthenticated, async (req: any, res) => {
+  app.post('/api/amocrm/refresh-metadata', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       await amoCrmService.refreshMetadata(userId);
       await logService.log(userId, 'info', 'Метаданные AmoCRM обновлены', {}, 'metadata');
       res.json({ message: "Метаданные успешно обновлены" });
@@ -92,9 +88,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/amocrm/metadata/:type', isAuthenticated, async (req: any, res) => {
+  app.get('/api/amocrm/metadata/:type', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { type } = req.params;
       
       const metadata = await storage.getAmoCrmMetadata(userId, type);
@@ -106,9 +102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // LPTracker settings routes
-  app.get('/api/lptracker/settings', isAuthenticated, async (req: any, res) => {
+  app.get('/api/lptracker/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const settings = await storage.getLpTrackerSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -117,9 +113,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/lptracker/settings', isAuthenticated, async (req: any, res) => {
+  app.post('/api/lptracker/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertLpTrackerSettingsSchema.parse({
         ...req.body,
         userId,
@@ -138,9 +134,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Sync rules routes
-  app.get('/api/sync-rules', isAuthenticated, async (req: any, res) => {
+  app.get('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const rules = await storage.getSyncRules(userId);
       res.json(rules);
     } catch (error) {
@@ -149,9 +145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/sync-rules', isAuthenticated, async (req: any, res) => {
+  app.post('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertSyncRuleSchema.parse({
         ...req.body,
         userId,
@@ -169,10 +165,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/sync-rules/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/sync-rules/:id', requireAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const rule = await storage.updateSyncRule(parseInt(id), req.body);
       if (!rule) {
@@ -187,10 +183,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/sync-rules/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/sync-rules/:id', requireAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       await storage.deleteSyncRule(parseInt(id));
       await logService.log(userId, 'info', 'Правило синхронизации удалено', { id }, 'rules');
@@ -202,9 +198,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload routes
-  app.get('/api/file-uploads', isAuthenticated, async (req: any, res) => {
+  app.get('/api/file-uploads', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const uploads = await storage.getFileUploads(userId);
       res.json(uploads);
     } catch (error) {
@@ -213,9 +209,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/file-uploads', isAuthenticated, upload.single('file'), async (req: any, res) => {
+  app.post('/api/file-uploads', requireAuth, upload.single('file'), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const file = req.file;
       
       if (!file) {
@@ -231,9 +227,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Call results routes
-  app.get('/api/call-results', isAuthenticated, async (req: any, res) => {
+  app.get('/api/call-results', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const results = await storage.getCallResults(userId);
       res.json(results);
     } catch (error) {
@@ -242,9 +238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/call-results', isAuthenticated, async (req: any, res) => {
+  app.post('/api/call-results', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const result = await storage.createCallResult({
         ...req.body,
         userId,
@@ -257,9 +253,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Logs routes
-  app.get('/api/logs', isAuthenticated, async (req: any, res) => {
+  app.get('/api/logs', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const logs = await storage.getSystemLogs(userId);
       res.json(logs);
     } catch (error) {
@@ -290,9 +286,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard stats
-  app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/dashboard/stats', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const [rules, uploads, callResults] = await Promise.all([
         storage.getSyncRules(userId),
