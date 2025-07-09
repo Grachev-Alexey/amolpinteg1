@@ -113,6 +113,15 @@ export default function DataTable({
     if (column.key.includes("Date") || column.key.includes("date")) {
       return new Date(value).toLocaleString('ru-RU');
     }
+
+    // Handle boolean values
+    if (typeof value === 'boolean') {
+      return (
+        <Badge variant="secondary" className={`status-indicator ${value ? 'status-connected' : 'status-disconnected'}`}>
+          {value ? 'Да' : 'Нет'}
+        </Badge>
+      );
+    }
     
     return value;
   };
