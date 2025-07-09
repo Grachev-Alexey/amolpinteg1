@@ -37,7 +37,7 @@ The application follows a full-stack architecture with clear separation between 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework
 - **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Replit Auth with session management
+- **Authentication**: Simple session-based authentication with local user storage
 - **API**: RESTful endpoints with TypeScript support
 - **File Processing**: Multer for file uploads and XLSX processing
 - **External APIs**: Integration with AmoCRM and LPTracker services
@@ -69,7 +69,7 @@ The application follows a full-stack architecture with clear separation between 
 
 ## Data Flow
 
-1. **User Authentication**: Replit Auth handles user login and session management
+1. **User Authentication**: Simple session-based authentication with local user database
 2. **Service Configuration**: Users configure AmoCRM and LPTracker connections
 3. **Metadata Sync**: System caches external service metadata for rule construction
 4. **Rule Creation**: Users build conditional logic using visual interface
@@ -90,9 +90,9 @@ The application follows a full-stack architecture with clear separation between 
 - **xlsx**: Excel file processing
 
 ### Authentication & Security
-- **express-session**: Session management
-- **connect-pg-simple**: PostgreSQL session store
-- **crypto**: Built-in encryption for sensitive data
+- **express-session**: Session management with MemoryStore
+- **crypto**: Built-in encryption for sensitive data and password hashing
+- **Simple Session Auth**: Custom session-based authentication without external dependencies
 
 ### Development Tools
 - **vite**: Fast build tool and dev server
@@ -109,9 +109,10 @@ The application follows a full-stack architecture with clear separation between 
 
 ### Production Build
 - **Frontend**: Vite builds optimized React application
-- **Backend**: ESBuild bundles Node.js server
+- **Backend**: Node.js server with TypeScript via tsx
 - **Database**: PostgreSQL with connection pooling
 - **Static Assets**: Served from Express server
+- **Session Storage**: In-memory session store for development
 
 ### Key Features
 - **Multi-user Support**: Each user has isolated settings and rules
@@ -122,5 +123,16 @@ The application follows a full-stack architecture with clear separation between 
 - **Responsive Design**: Works on desktop and mobile devices
 - **Dark Theme**: Exclusively dark theme implementation as per requirements
 - **Russian Localization**: Complete Russian language interface
+
+## Migration Status
+- **Status**: Complete ✓
+- **Date**: 2025-07-09
+- **Changes Made**:
+  - Removed Replit Auth dependency
+  - Implemented simple session-based authentication
+  - Fixed authentication middleware
+  - Created test user (admin/admin123)
+  - Database setup and migrations working
+  - All dependencies installed and working
 
 The system is designed to be scalable, maintainable, and user-friendly while providing powerful integration capabilities between AmoCRM and LPTracker systems.

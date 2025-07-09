@@ -15,7 +15,8 @@ const upload = multer({ dest: "uploads/" });
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
+  const userId = req.session?.userId;
+  if (!userId) {
     return res.status(401).json({ message: "Authentication required" });
   }
   next();
@@ -34,7 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AmoCRM settings routes
   app.get('/api/amocrm/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const settings = await storage.getAmoCrmSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -45,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/amocrm/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const validatedData = insertAmoCrmSettingsSchema.parse({
         ...req.body,
         userId,
@@ -65,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/amocrm/test-connection', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const { subdomain, apiKey } = req.body;
       
       const isValid = await amoCrmService.testConnection(subdomain, apiKey);
@@ -78,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/amocrm/refresh-metadata', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       await amoCrmService.refreshMetadata(userId);
       await logService.log(userId, 'info', 'Метаданные AmoCRM обновлены', {}, 'metadata');
       res.json({ message: "Метаданные успешно обновлены" });
@@ -90,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/amocrm/metadata/:type', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const { type } = req.params;
       
       const metadata = await storage.getAmoCrmMetadata(userId, type);
@@ -104,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // LPTracker settings routes
   app.get('/api/lptracker/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const settings = await storage.getLpTrackerSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -115,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/lptracker/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const validatedData = insertLpTrackerSettingsSchema.parse({
         ...req.body,
         userId,
@@ -136,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sync rules routes
   app.get('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const rules = await storage.getSyncRules(userId);
       res.json(rules);
     } catch (error) {
@@ -147,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const validatedData = insertSyncRuleSchema.parse({
         ...req.body,
         userId,
@@ -168,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/sync-rules/:id', requireAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
+      const userId = req.session.userId;
       
       const rule = await storage.updateSyncRule(parseInt(id), req.body);
       if (!rule) {
@@ -186,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/sync-rules/:id', requireAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
+      const userId = req.session.userId;
       
       await storage.deleteSyncRule(parseInt(id));
       await logService.log(userId, 'info', 'Правило синхронизации удалено', { id }, 'rules');
@@ -200,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // File upload routes
   app.get('/api/file-uploads', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const uploads = await storage.getFileUploads(userId);
       res.json(uploads);
     } catch (error) {
@@ -211,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/file-uploads', requireAuth, upload.single('file'), async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const file = req.file;
       
       if (!file) {
@@ -229,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Call results routes
   app.get('/api/call-results', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const results = await storage.getCallResults(userId);
       res.json(results);
     } catch (error) {
@@ -240,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/call-results', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const result = await storage.createCallResult({
         ...req.body,
         userId,
@@ -255,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Logs routes
   app.get('/api/logs', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       const logs = await storage.getSystemLogs(userId);
       res.json(logs);
     } catch (error) {
@@ -288,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats
   app.get('/api/dashboard/stats', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session.userId;
       
       const [rules, uploads, callResults] = await Promise.all([
         storage.getSyncRules(userId),
