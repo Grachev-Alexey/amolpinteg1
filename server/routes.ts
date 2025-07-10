@@ -360,6 +360,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // LPTracker status for regular users
+  app.get("/api/lptracker/status", requireAuth, async (req: any, res) => {
+    try {
+      const globalSettings = await storage.getLpTrackerGlobalSettings();
+      res.json({ 
+        configured: globalSettings?.isActive === true,
+        hasToken: !!globalSettings?.token
+      });
+    } catch (error) {
+      console.error("Error getting LPTracker status:", error);
+      res.status(500).json({ error: "Failed to get status" });
+    }
+  });
+
   // Sync rules routes
   app.get('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {
@@ -804,6 +818,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching LPTracker settings:", error);
       res.status(500).json({ message: "Не удалось получить настройки LPTracker" });
+    }
+  });
+
+  // Test LPTracker connection (admin only)
+  app.post("/api/admin/lptracker/test-connection", requireSuperuser, async (req: any, res) => {
+    try {
+      const { login, password, service, address } = req.body;
+      const result = await lpTrackerService.testConnection(login, password, address || "direct.lptracker.ru");
+      
+      if (result) {
+        // Save the settings with the successful connection
+        const settings = {
+          login,
+          password,
+          service: service || "CRM Integration",
+          address: address || "direct.lptracker.ru",
+          isActive: true,
+        };
+        await storage.saveLpTrackerGlobalSettings(settings);
+        
+        res.json({ success: true, message: "Connection successful" });
+      } else {
+        res.json({ success: false, message: "Invalid credentials" });
+      }
+    } catch (error) {
+      console.error("Error testing LPTracker connection:", error);
+      res.status(500).json({ success: false, message: "Connection test failed" });
     }
   });
 

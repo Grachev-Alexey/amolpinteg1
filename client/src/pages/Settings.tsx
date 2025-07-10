@@ -1,33 +1,26 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { handleUnauthorizedError } from "@/lib/authRedirect";
-import {
-  Settings as SettingsIcon,
-  CheckCircle,
-  AlertCircle,
-  RefreshCw,
-  Eye,
-  EyeOff,
-  Link,
-  Zap,
+import { 
+  Link, 
+  Eye, 
+  EyeOff, 
+  RefreshCw, 
+  CheckCircle, 
+  AlertCircle 
 } from "lucide-react";
+import { 
+  isUnauthorizedError, 
+  handleUnauthorizedError 
+} from "@/lib/authUtils";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -38,17 +31,7 @@ export default function Settings() {
     subdomain: "",
     apiKey: "",
   });
-  const [lpTrackerData, setLpTrackerData] = useState({
-    projectId: "",
-  });
-  const [lpTrackerGlobalData, setLpTrackerGlobalData] = useState({
-    login: "",
-    password: "",
-    service: "CRM Integration",
-    address: "direct.lptracker.ru",
-  });
   const [showAmoCrmKey, setShowAmoCrmKey] = useState(false);
-  const [showLpTrackerPassword, setShowLpTrackerPassword] = useState(false);
 
   // Fetch settings
   const { data: amoCrmSettings, isLoading: amoCrmLoading } = useQuery({
@@ -56,24 +39,19 @@ export default function Settings() {
     retry: false,
   });
 
-  const { data: lpTrackerSettings, isLoading: lpTrackerLoading } = useQuery({
-    queryKey: ["/api/lptracker/settings"],
+  // Only get LPTracker status for regular users
+  const { data: lpTrackerStatus } = useQuery({
+    queryKey: ["/api/lptracker/status"],
     retry: false,
   });
 
-  const { data: lpTrackerGlobalSettings, isLoading: lpTrackerGlobalLoading } =
-    useQuery({
-      queryKey: ["/api/lptracker/global-settings"],
-      retry: false,
-    });
+  const { data: lpTrackerMetadata } = useQuery({
+    queryKey: ["/api/lptracker/metadata/projects"],
+    retry: false,
+  });
 
   const { data: userInfo } = useQuery({
     queryKey: ["/api/user"],
-    retry: false,
-  });
-
-  const { data: lpTrackerGlobalStatus } = useQuery({
-    queryKey: ["/api/lptracker/global-status"],
     retry: false,
   });
 
@@ -102,16 +80,17 @@ export default function Settings() {
     },
   });
 
-  const saveLpTrackerMutation = useMutation({
-    mutationFn: async (data: any) => {
-      await apiRequest("/api/lptracker/settings", "POST", data);
+  // Add LPTracker metadata refresh for regular users
+  const refreshLpTrackerMetadataMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("/api/lptracker/refresh-metadata", "POST");
     },
     onSuccess: () => {
       toast({
-        title: "Успешно сохранено",
-        description: "Настройки проекта LPTracker обновлены",
+        title: "Метаданные обновлены",
+        description: "Данные LPTracker успешно синхронизированы",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/lptracker/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lptracker/metadata/projects"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -120,36 +99,7 @@ export default function Settings() {
       }
       toast({
         title: "Ошибка",
-        description: "Не удалось сохранить настройки LPTracker",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const saveLpTrackerGlobalMutation = useMutation({
-    mutationFn: async (data: any) => {
-      await apiRequest("/api/lptracker/global-settings", "POST", data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Успешно сохранено",
-        description: "Глобальные настройки LPTracker обновлены",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/lptracker/global-settings"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/lptracker/global-status"],
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        handleUnauthorizedError(error, toast);
-        return;
-      }
-      toast({
-        title: "Ошибка",
-        description: "Не удалось сохранить глобальные настройки LPTracker",
+        description: "Не удалось обновить метаданные LPTracker",
         variant: "destructive",
       });
     },
@@ -235,38 +185,13 @@ export default function Settings() {
     }
   }, [amoCrmSettings]);
 
-  useEffect(() => {
-    if (lpTrackerSettings) {
-      setLpTrackerData({
-        projectId: lpTrackerSettings.projectId || "",
-      });
-    }
-  }, [lpTrackerSettings]);
-
-  useEffect(() => {
-    if (lpTrackerGlobalSettings) {
-      setLpTrackerGlobalData({
-        login: lpTrackerGlobalSettings.login || "",
-        password: lpTrackerGlobalSettings.password || "",
-        service: lpTrackerGlobalSettings.service || "CRM Integration",
-        address: lpTrackerGlobalSettings.address || "direct.lptracker.ru",
-      });
-    }
-  }, [lpTrackerGlobalSettings]);
-
   const handleAmoCrmSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     saveAmoCrmMutation.mutate(amoCrmData);
   };
 
-  const handleLpTrackerSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveLpTrackerMutation.mutate(lpTrackerData);
-  };
-
-  const handleLpTrackerGlobalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveLpTrackerGlobalMutation.mutate(lpTrackerGlobalData);
+  const handleRefreshLpTrackerMetadata = () => {
+    refreshLpTrackerMetadataMutation.mutate();
   };
 
   const handleTestConnection = () => {
@@ -453,218 +378,83 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* LPTracker Global Settings (for superuser only) */}
-      {userInfo?.role === "superuser" && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-purple-500" />
-                </div>
-                <div>
-                  <CardTitle>LPTracker - Глобальные настройки</CardTitle>
-                  <CardDescription>
-                    Настройки подключения к LPTracker для всех пользователей
-                  </CardDescription>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                {lpTrackerGlobalSettings?.isActive ? (
-                  <Badge
-                    variant="default"
-                    className="status-indicator status-connected"
-                  >
-                    Настроено
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="secondary"
-                    className="status-indicator status-disconnected"
-                  >
-                    Не настроено
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLpTrackerGlobalSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="lpLogin">Логин LPTracker</Label>
-                  <Input
-                    id="lpLogin"
-                    value={lpTrackerGlobalData.login}
-                    onChange={(e) =>
-                      setLpTrackerGlobalData({
-                        ...lpTrackerGlobalData,
-                        login: e.target.value,
-                      })
-                    }
-                    placeholder="Введите логин (email)"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lpPassword">Пароль LPTracker</Label>
-                  <div className="relative">
-                    <Input
-                      id="lpPassword"
-                      type={showLpTrackerPassword ? "text" : "password"}
-                      value={lpTrackerGlobalData.password}
-                      onChange={(e) =>
-                        setLpTrackerGlobalData({
-                          ...lpTrackerGlobalData,
-                          password: e.target.value,
-                        })
-                      }
-                      placeholder="Введите пароль"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() =>
-                        setShowLpTrackerPassword(!showLpTrackerPassword)
-                      }
-                    >
-                      {showLpTrackerPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="lpService">Название сервиса</Label>
-                  <Input
-                    id="lpService"
-                    value={lpTrackerGlobalData.service}
-                    onChange={(e) =>
-                      setLpTrackerGlobalData({
-                        ...lpTrackerGlobalData,
-                        service: e.target.value,
-                      })
-                    }
-                    placeholder="CRM Integration"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lpAddress">Адрес сервера</Label>
-                  <Input
-                    id="lpAddress"
-                    value={lpTrackerGlobalData.address}
-                    onChange={(e) =>
-                      setLpTrackerGlobalData({
-                        ...lpTrackerGlobalData,
-                        address: e.target.value,
-                      })
-                    }
-                    placeholder="direct.lptracker.ru"
-                  />
-                </div>
-              </div>
-              <Button
-                type="submit"
-                disabled={saveLpTrackerGlobalMutation.isPending}
-                className="gradient-primary hover:opacity-90"
-              >
-                {saveLpTrackerGlobalMutation.isPending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Сохранение...
-                  </>
-                ) : (
-                  "Сохранить глобальные настройки"
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* LPTracker User Settings */}
+      {/* LPTracker Status */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                <Zap className="w-4 h-4 text-purple-500" />
+              <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <Link className="w-4 h-4 text-green-500" />
               </div>
               <div>
-                <CardTitle>LPTracker - Настройки проекта</CardTitle>
+                <CardTitle>LPTracker</CardTitle>
                 <CardDescription>
-                  ID проекта для интеграции с LPTracker
+                  Статус подключения к LPTracker
                 </CardDescription>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {lpTrackerSettings?.projectId ? (
+              {lpTrackerStatus?.configured ? (
                 <Badge
                   variant="default"
                   className="status-indicator status-connected"
                 >
-                  Настроено
+                  Подключено
                 </Badge>
               ) : (
                 <Badge
                   variant="secondary"
                   className="status-indicator status-disconnected"
                 >
-                  Не настроено
+                  Не подключено
                 </Badge>
               )}
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {lpTrackerGlobalStatus?.configured ? (
-            <form onSubmit={handleLpTrackerSubmit} className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="lpProjectId">ID проекта</Label>
-                <Input
-                  id="lpProjectId"
-                  value={lpTrackerData.projectId}
-                  onChange={(e) =>
-                    setLpTrackerData({
-                      ...lpTrackerData,
-                      projectId: e.target.value,
-                    })
-                  }
-                  placeholder="Введите ID проекта LPTracker"
-                  required
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Уникальный идентификатор проекта в системе LPTracker
+                <h3 className="text-lg font-semibold">Статус подключения</h3>
+                <p className="text-sm text-muted-foreground">
+                  {lpTrackerStatus?.configured 
+                    ? "LPTracker настроен администратором и готов к работе" 
+                    : "LPTracker не настроен. Обратитесь к администратору"}
+                </p>
+              </div>
+            </div>
+            
+            <Separator className="my-6" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Метаданные</h3>
+                <p className="text-sm text-muted-foreground">
+                  Синхронизация проектов и полей из LPTracker
                 </p>
               </div>
               <Button
-                type="submit"
-                disabled={saveLpTrackerMutation.isPending}
-                className="gradient-primary hover:opacity-90"
+                variant="outline"
+                onClick={handleRefreshLpTrackerMetadata}
+                disabled={
+                  refreshLpTrackerMetadataMutation.isPending || !lpTrackerStatus?.configured
+                }
               >
-                {saveLpTrackerMutation.isPending ? (
+                {refreshLpTrackerMetadataMutation.isPending ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Сохранение...
+                    Обновление...
                   </>
                 ) : (
-                  "Сохранить настройки проекта"
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Обновить метаданные
+                  </>
                 )}
               </Button>
-            </form>
-          ) : (
-            <div className="text-center py-8">
-              <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                LPTracker не настроен
-              </h3>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>

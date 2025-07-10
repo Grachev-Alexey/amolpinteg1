@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Database, Shield, Mail, Bell } from "lucide-react";
+import { Settings, Database, Shield, Mail, Bell, RefreshCw, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SystemSettings() {
@@ -65,6 +65,36 @@ export default function SystemSettings() {
     },
   });
 
+  const testLpTrackerMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("/api/admin/lptracker/test-connection", "POST", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: "Соединение установлено",
+          description: "Подключение к LPTracker успешно. Токен получен.",
+        });
+        // Refresh settings to get the new token
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/lptracker-settings"] });
+      } else {
+        toast({
+          title: "Ошибка подключения к LPTracker",
+          description: data.message || "Неверные данные для входа в LPTracker",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось проверить подключение к LPTracker",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleLpTrackerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
@@ -90,6 +120,17 @@ export default function SystemSettings() {
       maintenanceMessage: formData.get("maintenanceMessage"),
     };
     updateSystemMutation.mutate(settings);
+  };
+
+  const handleTestLpTrackerConnection = () => {
+    if (lpTrackerSettings) {
+      testLpTrackerMutation.mutate({
+        login: lpTrackerSettings.login,
+        password: lpTrackerSettings.password,
+        service: lpTrackerSettings.service,
+        address: lpTrackerSettings.address,
+      });
+    }
   };
 
   if (lpTrackerLoading || systemLoading) {
@@ -170,9 +211,33 @@ export default function SystemSettings() {
                   />
                   <Label htmlFor="isActive">Активировать подключение</Label>
                 </div>
-                <Button type="submit" disabled={updateLpTrackerMutation.isPending}>
-                  {updateLpTrackerMutation.isPending ? "Сохранение..." : "Сохранить"}
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Button type="submit" disabled={updateLpTrackerMutation.isPending}>
+                    {updateLpTrackerMutation.isPending ? "Сохранение..." : "Сохранить"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTestLpTrackerConnection}
+                    disabled={
+                      testLpTrackerMutation.isPending ||
+                      !lpTrackerSettings?.login ||
+                      !lpTrackerSettings?.password
+                    }
+                  >
+                    {testLpTrackerMutation.isPending ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Проверка...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Проверить подключение
+                      </>
+                    )}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>

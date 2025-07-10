@@ -174,13 +174,32 @@ export class LpTrackerService {
       });
 
       if (!response.ok) {
+        await this.logService.error(undefined, `LPTracker connection test failed: ${response.status}`, { login, address });
         return false;
       }
 
       const result = await response.json();
-      return result.status === 'success' && result.result?.token;
+      
+      // Check if the response contains a token according to LPTracker API documentation
+      if (result.status === 'success' && result.result?.token) {
+        await this.logService.info(undefined, 'LPTracker connection test successful', { login, address });
+        
+        // Save the token for future use
+        const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+        if (globalSettings) {
+          await this.storage.updateLpTrackerGlobalSettings({
+            token: result.result.token,
+            isActive: true
+          });
+        }
+        
+        return true;
+      } else {
+        await this.logService.error(undefined, 'LPTracker connection test failed: Invalid response', { login, address, response: result });
+        return false;
+      }
     } catch (error) {
-      console.error('LPTracker connection test failed:', error);
+      await this.logService.error(undefined, `LPTracker connection test error: ${error}`, { login, address });
       return false;
     }
   }
