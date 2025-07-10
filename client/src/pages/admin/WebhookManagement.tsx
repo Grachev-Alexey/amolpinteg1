@@ -29,7 +29,7 @@ export default function WebhookManagement() {
   const { data: webhookStatus, isLoading: webhookLoading } = useQuery({
     queryKey: ["/api/admin/webhook-status"],
     queryFn: getQueryFn({ on401: "throw" }),
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
 
   // Get global webhook status
@@ -48,8 +48,11 @@ export default function WebhookManagement() {
         title: "Успешно!",
         description: `Вебхук установлен для пользователя`,
       });
+      // Force immediate refetch of all related queries
       queryClient.invalidateQueries({ queryKey: ["/api/admin/webhook-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/integration-status"] });
+      queryClient.refetchQueries({ queryKey: ["/api/admin/webhook-status"] });
+      queryClient.refetchQueries({ queryKey: ["/api/admin/integration-status"] });
       setIsDialogOpen(false);
       setWebhookUrl("");
       setSelectedUserId("");
@@ -73,8 +76,11 @@ export default function WebhookManagement() {
         title: "Успешно!",
         description: `Вебхук удален для пользователя`,
       });
+      // Force immediate refetch of all related queries
       queryClient.invalidateQueries({ queryKey: ["/api/admin/webhook-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/integration-status"] });
+      queryClient.refetchQueries({ queryKey: ["/api/admin/webhook-status"] });
+      queryClient.refetchQueries({ queryKey: ["/api/admin/integration-status"] });
     },
     onError: (error: any) => {
       toast({

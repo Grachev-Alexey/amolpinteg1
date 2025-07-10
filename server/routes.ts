@@ -1203,7 +1203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const lastWebhookActivity = webhookActivity.length > 0 ? 
             webhookActivity[0].createdAt : null;
 
-          webhookStatuses.push({
+          const webhookData = {
             userId: user.id,
             username: user.username,
             projectId: lpTrackerSettings.projectId,
@@ -1211,7 +1211,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastActivity: lastWebhookActivity,
             activityCount: webhookActivity.length,
             status: lpTrackerSettings.webhookActive ? 'configured' : 'not_configured'
-          });
+          };
+          
+          // Log webhook status for debugging
+          console.log(`[DEBUG] Webhook status for user ${user.username} (${user.id}):`, webhookData);
+          
+          webhookStatuses.push(webhookData);
         }
       }
 
