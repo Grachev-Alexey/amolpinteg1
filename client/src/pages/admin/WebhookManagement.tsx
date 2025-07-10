@@ -27,9 +27,11 @@ export default function WebhookManagement() {
 
   // Get detailed webhook status
   const { data: webhookStatus, isLoading: webhookLoading } = useQuery({
-    queryKey: ["/api/admin/webhook-status"],
+    queryKey: ["/api/admin/webhook-status", Date.now()],
     queryFn: getQueryFn({ on401: "throw" }),
     refetchInterval: 3000,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   // Get global webhook status

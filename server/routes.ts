@@ -1196,10 +1196,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get detailed webhook status for admin
   app.get('/api/admin/webhook-status', requireSuperuser, async (req: any, res) => {
     try {
-      // Disable caching for this endpoint
-      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      // Force no caching
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
+      res.set('Surrogate-Control', 'no-store');
+      res.set('ETag', Date.now().toString());
       
       const allUsers = await db.select().from(users);
       const webhookStatuses = [];
