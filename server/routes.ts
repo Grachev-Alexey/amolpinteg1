@@ -424,6 +424,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET endpoints для тестирования вебхуков (для отладки)
+  app.get('/api/webhooks/amocrm', async (req, res) => {
+    console.log("\n=== AmoCRM Webhook GET request ===");
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("Query:", JSON.stringify(req.query, null, 2));
+    console.log("======================================\n");
+    
+    await logService.log(undefined, 'info', 'AmoCRM Webhook GET запрос', { 
+      headers: req.headers,
+      query: req.query,
+      method: req.method,
+      url: req.url
+    }, 'webhook');
+    
+    res.json({ 
+      message: "AmoCRM webhook endpoint активен",
+      postUrl: `${req.protocol}://${req.get('host')}/api/webhooks/amocrm`,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  app.get('/api/webhooks/lptracker', async (req, res) => {
+    console.log("\n=== LPTracker Webhook GET request ===");
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("Query:", JSON.stringify(req.query, null, 2));
+    console.log("=========================================\n");
+    
+    await logService.log(undefined, 'info', 'LPTracker Webhook GET запрос', { 
+      headers: req.headers,
+      query: req.query,
+      method: req.method,
+      url: req.url
+    }, 'webhook');
+    
+    res.json({ 
+      message: "LPTracker webhook endpoint активен",
+      postUrl: `${req.protocol}://${req.get('host')}/api/webhooks/lptracker`,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Sync rules routes
   app.get('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {
@@ -561,20 +602,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook routes
   app.post('/api/webhooks/amocrm', async (req, res) => {
     try {
+      console.log("\n=== AmoCRM Webhook received ===");
+      console.log("Headers:", JSON.stringify(req.headers, null, 2));
+      console.log("Body:", JSON.stringify(req.body, null, 2));
+      console.log("Query:", JSON.stringify(req.query, null, 2));
+      console.log("Method:", req.method);
+      console.log("URL:", req.url);
+      console.log("=====================================\n");
+      
+      await logService.log(undefined, 'info', 'AmoCRM Webhook получен', { 
+        headers: req.headers,
+        body: req.body,
+        query: req.query,
+        method: req.method,
+        url: req.url
+      }, 'webhook');
+      
       await webhookService.handleAmoCrmWebhook(req.body);
       res.json({ message: "Webhook обработан" });
     } catch (error) {
       console.error("Error handling AmoCRM webhook:", error);
+      await logService.log(undefined, 'error', 'Ошибка обработки AmoCRM webhook', { error, body: req.body }, 'webhook');
       res.status(500).json({ message: "Не удалось обработать webhook" });
     }
   });
 
   app.post('/api/webhooks/lptracker', async (req, res) => {
     try {
+      console.log("\n=== LPTracker Webhook received ===");
+      console.log("Headers:", JSON.stringify(req.headers, null, 2));
+      console.log("Body:", JSON.stringify(req.body, null, 2));
+      console.log("Query:", JSON.stringify(req.query, null, 2));
+      console.log("Method:", req.method);
+      console.log("URL:", req.url);
+      console.log("======================================\n");
+      
+      await logService.log(undefined, 'info', 'LPTracker Webhook получен', { 
+        headers: req.headers,
+        body: req.body,
+        query: req.query,
+        method: req.method,
+        url: req.url
+      }, 'webhook');
+      
       await webhookService.handleLpTrackerWebhook(req.body);
       res.json({ message: "Webhook обработан" });
     } catch (error) {
       console.error("Error handling LPTracker webhook:", error);
+      await logService.log(undefined, 'error', 'Ошибка обработки LPTracker webhook', { error, body: req.body }, 'webhook');
       res.status(500).json({ message: "Не удалось обработать webhook" });
     }
   });

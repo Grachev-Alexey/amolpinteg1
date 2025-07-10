@@ -18,13 +18,32 @@ export class WebhookService {
 
   async handleAmoCrmWebhook(payload: any): Promise<void> {
     try {
-      await this.logService.log(undefined, 'info', 'Получен webhook от AmoCRM', { payload }, 'webhook');
+      console.log("AmoCRM Webhook Processing - Payload structure:", {
+        keys: Object.keys(payload || {}),
+        payload: payload
+      });
+      
+      await this.logService.log(undefined, 'info', 'AmoCRM Webhook - Детальный анализ', { 
+        payloadKeys: Object.keys(payload || {}),
+        payloadType: typeof payload,
+        payloadLength: JSON.stringify(payload).length,
+        fullPayload: payload 
+      }, 'webhook');
 
       // Определяем тип события
-      const eventType = payload.type || payload.event_type;
+      const eventType = payload.type || payload.event_type || payload.event;
+      
+      console.log("AmoCRM Event Type detected:", eventType);
       
       if (!eventType) {
-        await this.logService.log(undefined, 'warning', 'Неизвестный тип события в webhook AmoCRM', { payload }, 'webhook');
+        await this.logService.log(undefined, 'warning', 'AmoCRM - Неизвестный тип события', { 
+          payload,
+          possibleEventFields: {
+            type: payload.type,
+            event_type: payload.event_type,
+            event: payload.event
+          }
+        }, 'webhook');
         return;
       }
 
@@ -52,13 +71,32 @@ export class WebhookService {
 
   async handleLpTrackerWebhook(payload: any): Promise<void> {
     try {
-      await this.logService.log(undefined, 'info', 'Получен webhook от LPTracker', { payload }, 'webhook');
+      console.log("LPTracker Webhook Processing - Payload structure:", {
+        keys: Object.keys(payload || {}),
+        payload: payload
+      });
+      
+      await this.logService.log(undefined, 'info', 'LPTracker Webhook - Детальный анализ', { 
+        payloadKeys: Object.keys(payload || {}),
+        payloadType: typeof payload,
+        payloadLength: JSON.stringify(payload).length,
+        fullPayload: payload 
+      }, 'webhook');
 
       // Определяем тип события
-      const eventType = payload.event || payload.type;
+      const eventType = payload.event || payload.type || payload.event_type;
+      
+      console.log("LPTracker Event Type detected:", eventType);
       
       if (!eventType) {
-        await this.logService.log(undefined, 'warning', 'Неизвестный тип события в webhook LPTracker', { payload }, 'webhook');
+        await this.logService.log(undefined, 'warning', 'LPTracker - Неизвестный тип события', { 
+          payload,
+          possibleEventFields: {
+            event: payload.event,
+            type: payload.type,
+            event_type: payload.event_type
+          }
+        }, 'webhook');
         return;
       }
 
