@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,6 +22,20 @@ import SystemSettings from "@/pages/admin/SystemSettings";
 import AdminMonitoring from "@/pages/AdminMonitoring";
 import IntegrationMonitoring from "@/pages/admin/IntegrationMonitoring";
 
+// Component to handle redirects for unauthenticated users
+function AuthRedirect() {
+  const [location, setLocation] = useLocation();
+  
+  useEffect(() => {
+    // If user is trying to access protected route, redirect to auth
+    if (location !== "/" && location !== "/auth") {
+      setLocation("/auth");
+    }
+  }, [location, setLocation]);
+
+  return <AuthPage />;
+}
+
 function Router() {
   const { user, isLoading } = useAuth();
 
@@ -41,6 +56,8 @@ function Router() {
         <>
           <Route path="/" component={Landing} />
           <Route path="/auth" component={AuthPage} />
+          {/* Catch all other routes and redirect to auth */}
+          <Route component={AuthRedirect} />
         </>
       ) : user.role === "superuser" ? (
         <AdminLayout>
@@ -51,6 +68,7 @@ function Router() {
           <Route path="/admin/settings" component={SystemSettings} />
           <Route path="/admin/logs" component={Logs} />
           <Route path="/admin/monitoring" component={AdminMonitoring} />
+          <Route component={NotFound} />
         </AdminLayout>
       ) : (
         <Layout>
@@ -60,9 +78,9 @@ function Router() {
           <Route path="/upload" component={FileUpload} />
           <Route path="/results" component={CallResults} />
           <Route path="/logs" component={Logs} />
+          <Route component={NotFound} />
         </Layout>
       )}
-      <Route component={NotFound} />
     </Switch>
   );
 }
