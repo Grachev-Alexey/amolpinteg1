@@ -274,7 +274,7 @@ export default function RuleConstructor({
       id: Date.now().toString(),
       type: "",
       searchBy: "phone", // default search field
-      fields: {}, // fields to sync
+      fieldMappings: {}, // field mappings object
       createIfNotFound: true
     };
     setRule({
@@ -303,6 +303,60 @@ export default function RuleConstructor({
         ...rule.actions,
         list: rule.actions.list.map((a: any) => 
           a.id === id ? { ...a, [field]: value } : a
+        )
+      }
+    });
+  };
+
+  const updateActionFieldMapping = (actionId: string, sourceField: string, targetField: string) => {
+    setRule({
+      ...rule,
+      actions: {
+        ...rule.actions,
+        list: rule.actions.list.map((a: any) => 
+          a.id === actionId ? { 
+            ...a, 
+            fieldMappings: {
+              ...a.fieldMappings,
+              [sourceField]: targetField
+            }
+          } : a
+        )
+      }
+    });
+  };
+
+  const removeActionFieldMapping = (actionId: string, sourceField: string) => {
+    setRule({
+      ...rule,
+      actions: {
+        ...rule.actions,
+        list: rule.actions.list.map((a: any) => {
+          if (a.id === actionId) {
+            const newFieldMappings = { ...a.fieldMappings };
+            delete newFieldMappings[sourceField];
+            return { ...a, fieldMappings: newFieldMappings };
+          }
+          return a;
+        })
+      }
+    });
+  };
+
+  const addActionFieldMapping = (actionId: string) => {
+    const newKey = `new_mapping_${Date.now()}`;
+    setRule({
+      ...rule,
+      actions: {
+        ...rule.actions,
+        list: rule.actions.list.map((a: any) => 
+          a.id === actionId ? { 
+            ...a, 
+            fieldMappings: {
+              ...a.fieldMappings,
+              [newKey]: '' // Уникальный ключ для нового маппинга
+            }
+          } : a
         )
       }
     });
@@ -604,90 +658,91 @@ export default function RuleConstructor({
                       </div>
 
                       <div className="space-y-3">
-                        <Label className="text-sm font-medium">Маппинг полей</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Маппинг полей</Label>
+                          <Button 
+                            type="button"
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => addActionFieldMapping(action.id)}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Добавить поле
+                          </Button>
+                        </div>
+                        
                         <div className="space-y-2">
-                          <div className="grid grid-cols-3 gap-2 text-xs font-medium text-muted-foreground">
+                          <div className="grid grid-cols-4 gap-2 text-xs font-medium text-muted-foreground">
                             <div>Поле источника</div>
                             <div>→</div>
                             <div>Поле назначения</div>
+                            <div></div>
                           </div>
                           
-                          {/* Базовые поля всегда синхронизируются */}
-                          <div className="grid grid-cols-3 gap-2 items-center py-1 bg-green-50 dark:bg-green-900/20 px-2 rounded">
-                            <div className="text-sm font-medium">name</div>
-                            <div className="text-center">→</div>
-                            <div className="text-sm font-medium">
-                              {action.type === 'sync_to_amocrm' ? 'Имя контакта' : 'Имя лида'}
+                          {/* Динамический маппинг полей */}
+                          {action.fieldMappings && Object.entries(action.fieldMappings).length > 0 ? (
+                            Object.entries(action.fieldMappings).map(([sourceField, targetField], index) => (
+                              <div key={`${action.id}-${sourceField}-${index}`} className="grid grid-cols-4 gap-2 items-center py-1">
+                                <div>
+                                  <Select
+                                    value={sourceField.startsWith('new_mapping_') ? '' : sourceField}
+                                    onValueChange={(value) => {
+                                      // Удаляем старое маппинг и добавляем новое
+                                      removeActionFieldMapping(action.id, sourceField);
+                                      updateActionFieldMapping(action.id, value, targetField as string);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8">
+                                      <SelectValue placeholder="Выберите поле источника" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {getSourceFields().map((field) => (
+                                        <SelectItem key={field.id} value={field.id}>
+                                          {field.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                <div className="text-center text-muted-foreground">→</div>
+                                
+                                <div>
+                                  <Select
+                                    value={targetField as string}
+                                    onValueChange={(value) => updateActionFieldMapping(action.id, sourceField, value)}
+                                  >
+                                    <SelectTrigger className="h-8">
+                                      <SelectValue placeholder="Выберите поле назначения" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {getTargetFields(action.type).map((field) => (
+                                        <SelectItem key={field.id} value={field.id}>
+                                          {field.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                <div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeActionFieldMapping(action.id, sourceField)}
+                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-4 text-muted-foreground">
+                              <p className="text-sm">Нет настроенных полей для синхронизации</p>
+                              <p className="text-xs mt-1">Нажмите "Добавить поле" чтобы настроить маппинг</p>
                             </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-2 items-center py-1 bg-green-50 dark:bg-green-900/20 px-2 rounded">
-                            <div className="text-sm font-medium">phone</div>
-                            <div className="text-center">→</div>
-                            <div className="text-sm font-medium">Телефон</div>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-2 items-center py-1 bg-green-50 dark:bg-green-900/20 px-2 rounded">
-                            <div className="text-sm font-medium">email</div>
-                            <div className="text-center">→</div>
-                            <div className="text-sm font-medium">Email</div>
-                          </div>
-
-                          {/* Дополнительные поля для AmoCRM */}
-                          {action.type === 'sync_to_amocrm' && (
-                            <>
-                              <div className="grid grid-cols-3 gap-2 items-center py-1 bg-blue-50 dark:bg-blue-900/20 px-2 rounded">
-                                <div className="text-sm font-medium">deal_name</div>
-                                <div className="text-center">→</div>
-                                <div className="text-sm font-medium">Название сделки</div>
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 items-center py-1 bg-blue-50 dark:bg-blue-900/20 px-2 rounded">
-                                <div className="text-sm font-medium">price</div>
-                                <div className="text-center">→</div>
-                                <div className="text-sm font-medium">Бюджет сделки</div>
-                              </div>
-                            </>
-                          )}
-                          
-                          {/* Дополнительные поля из CRM */}
-                          {action.type === 'sync_to_amocrm' && contactsFields.length > 0 && (
-                            <>
-                              <div className="text-xs text-muted-foreground mt-3 mb-2">
-                                Дополнительные поля AmoCRM (при наличии в webhook):
-                              </div>
-                              {contactsFields.slice(0, 5).map((field) => (
-                                <div key={field.id} className="grid grid-cols-3 gap-2 items-center py-1 bg-muted/30 px-2 rounded">
-                                  <div className="text-sm text-muted-foreground">{field.code || field.name}</div>
-                                  <div className="text-center text-muted-foreground">→</div>
-                                  <div className="text-sm text-muted-foreground">{field.name}</div>
-                                </div>
-                              ))}
-                              {contactsFields.length > 5 && (
-                                <div className="text-xs text-muted-foreground">
-                                  и еще {contactsFields.length - 5} полей...
-                                </div>
-                              )}
-                            </>
-                          )}
-                          
-                          {action.type === 'sync_to_lptracker' && lpTrackerCustomFields.length > 0 && (
-                            <>
-                              <div className="text-xs text-muted-foreground mt-3 mb-2">
-                                Дополнительные поля LPTracker (при наличии в webhook):
-                              </div>
-                              {lpTrackerCustomFields.slice(0, 5).map((field) => (
-                                <div key={field.id} className="grid grid-cols-3 gap-2 items-center py-1 bg-muted/30 px-2 rounded">
-                                  <div className="text-sm text-muted-foreground">{field.name}</div>
-                                  <div className="text-center text-muted-foreground">→</div>
-                                  <div className="text-sm text-muted-foreground">{field.name}</div>
-                                </div>
-                              ))}
-                              {lpTrackerCustomFields.length > 5 && (
-                                <div className="text-xs text-muted-foreground">
-                                  и еще {lpTrackerCustomFields.length - 5} полей...
-                                </div>
-                              )}
-                            </>
                           )}
                         </div>
                       </div>
