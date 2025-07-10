@@ -683,6 +683,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin LPTracker user settings endpoints
+  app.get("/api/admin/lptracker-user-settings", requireSuperuser, async (req, res) => {
+    try {
+      const settings = await storage.getAllLpTrackerSettings();
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/users/:userId/lptracker", requireSuperuser, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { projectId } = req.body;
+
+      if (!projectId) {
+        return res.status(400).json({ message: "ID проекта обязателен" });
+      }
+
+      const settings = await storage.saveLpTrackerSettings({
+        userId,
+        projectId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get('/api/admin/lptracker-settings', requireSuperuser, async (req: any, res) => {
     try {
       const settings = await storage.getLpTrackerGlobalSettings();

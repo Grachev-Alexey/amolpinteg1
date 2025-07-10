@@ -49,6 +49,7 @@ export interface IStorage {
   updateLpTrackerGlobalSettings(settings: Partial<InsertLpTrackerGlobalSettings>): Promise<LpTrackerGlobalSettings | undefined>;
   
   getLpTrackerSettings(userId: string): Promise<LpTrackerSettings | undefined>;
+  getAllLpTrackerSettings(): Promise<LpTrackerSettings[]>;
   saveLpTrackerSettings(settings: InsertLpTrackerSettings): Promise<LpTrackerSettings>;
 
   // Metadata operations
@@ -229,6 +230,10 @@ export class DatabaseStorage implements IStorage {
       .from(lpTrackerSettings)
       .where(eq(lpTrackerSettings.userId, userId));
     return settings;
+  }
+
+  async getAllLpTrackerSettings(): Promise<LpTrackerSettings[]> {
+    return await db.select().from(lpTrackerSettings);
   }
 
   async saveLpTrackerSettings(settings: InsertLpTrackerSettings): Promise<LpTrackerSettings> {

@@ -15,7 +15,7 @@ export default function NewLanding() {
                 <Zap className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold">CRM Integration</h1>
+                <h1 className="text-xl font-bold text-foreground">CRM Integration</h1>
                 <p className="text-sm text-muted-foreground">AmoCRM • LPTracker</p>
               </div>
             </div>

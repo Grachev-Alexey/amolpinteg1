@@ -20,7 +20,6 @@ const navigationItems = [
   { path: "/rules", icon: Workflow, label: "Конструктор правил" },
   { path: "/upload", icon: Upload, label: "Загрузка контактов" },
   { path: "/results", icon: Phone, label: "Результаты прозвонов" },
-  { path: "/logs", icon: FileText, label: "Логи" },
 ];
 
 export default function Sidebar() {
