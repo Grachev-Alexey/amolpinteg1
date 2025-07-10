@@ -369,10 +369,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // LPTracker status for regular users
   app.get("/api/lptracker/status", requireAuth, async (req: any, res) => {
     try {
+      const userId = req.session.userId;
+      
+      // Check global settings first
       const globalSettings = await storage.getLpTrackerGlobalSettings();
+      const globalConfigured = globalSettings?.isActive === true;
+      
+      // Check user-specific settings
+      const userSettings = await storage.getLpTrackerSettings(userId);
+      const userConfigured = !!userSettings?.projectId;
+      
+      // User is "connected" if both global settings are active AND user has project
+      const connected = globalConfigured && userConfigured;
+      
       res.json({ 
-        configured: globalSettings?.isActive === true,
-        hasToken: !!globalSettings?.token
+        configured: globalConfigured,
+        connected: connected,
+        hasToken: !!globalSettings?.login && !!globalSettings?.password,
+        projectId: userSettings?.projectId || null
       });
     } catch (error) {
       console.error("Error getting LPTracker status:", error);
