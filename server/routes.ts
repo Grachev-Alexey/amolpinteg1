@@ -116,12 +116,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId;
       let { subdomain, apiKey } = req.body;
       
+      console.log("AmoCRM test-connection received:", { 
+        subdomain, 
+        apiKeyLength: apiKey?.length || 0,
+        hasSubdomain: !!subdomain,
+        hasApiKey: !!apiKey
+      });
+      
       // Если данные пустые, пытаемся использовать сохраненные
       if (!apiKey || !subdomain) {
         const settings = await storage.getAmoCrmSettings(userId);
         if (settings) {
           apiKey = apiKey || settings.apiKey;
           subdomain = subdomain || settings.subdomain;
+          console.log("Using saved settings:", { 
+            subdomain, 
+            apiKeyLength: apiKey?.length || 0 
+          });
         }
       }
       
@@ -133,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ isValid: false, message: "Поддомен не предоставлен" });
       }
       
-      console.log("AmoCRM test-connection:", { subdomain, apiKeyLength: apiKey.length });
+      console.log("AmoCRM test-connection final:", { subdomain, apiKeyLength: apiKey.length });
       
       // Проверяем подключение
       const testResult = await amoCrmService.testConnection(subdomain, apiKey);
