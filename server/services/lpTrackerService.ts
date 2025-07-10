@@ -69,7 +69,9 @@ export class LpTrackerService {
         webhookDataName: webhookData.name,
         webhookDataFirstName: webhookData.first_name,
         contactDataName: contactData.name,
-        allWebhookData: webhookData
+        contactDataFields: contactData.fields,
+        lpTrackerCustomFields: webhookData.lptracker_custom_fields,
+        lpTrackerContactFields: webhookData.lptracker_contact_fields
       }, 'lptracker');
 
       // Добавляем контактные данные
@@ -91,6 +93,21 @@ export class LpTrackerService {
       if (webhookData.lptracker_contact_fields) {
         contactData.fields = webhookData.lptracker_contact_fields;
       }
+      
+      // Также проверяем lptracker_custom_fields (это может быть основной источник полей)
+      if (webhookData.lptracker_custom_fields) {
+        contactData.fields = { ...contactData.fields, ...webhookData.lptracker_custom_fields };
+      }
+
+      const requestBody = {
+        project_id: projectId,
+        ...contactData
+      };
+      
+      await this.logService.log(userId, 'info', 'LPTracker - Отправка данных контакта в API', { 
+        requestBody,
+        url: `${baseUrl}/contact`
+      }, 'lptracker');
 
       const createResponse = await fetch(`${baseUrl}/contact`, {
         method: 'POST',
@@ -98,10 +115,7 @@ export class LpTrackerService {
           'Content-Type': 'application/json',
           'token': token
         },
-        body: JSON.stringify({
-          project_id: projectId,
-          ...contactData
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!createResponse.ok) {
