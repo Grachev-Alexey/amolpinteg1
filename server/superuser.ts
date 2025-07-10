@@ -4,29 +4,29 @@ import crypto from "crypto";
 
 export async function createSuperuserIfNotExists(): Promise<void> {
   try {
-    // Проверяем существует ли суперпользователь
-    const existingSuperuser = await storage.getUserByUsername("entize");
+    // Check if admin user exists
+    const existingAdmin = await storage.getUserByUsername("admin");
     
-    if (existingSuperuser) {
-
+    if (existingAdmin) {
+      console.log("Admin user already exists");
       return;
     }
 
-    // Создаем суперпользователя (используем простое хеширование)
-    const hashedPassword = crypto.createHash('sha256').update("cd5d56a8").digest('hex');
+    // Create admin user with simple hashing for testing
+    const hashedPassword = crypto.createHash('sha256').update("admin123").digest('hex');
     
-    const superuser = await storage.createUser({
+    const admin = await storage.createUser({
       id: nanoid(),
-      username: "entize",
-      email: "admin@entize.com",
+      username: "admin",
+      email: "admin@test.com",
       password: hashedPassword,
-      firstName: "Администратор",
-      lastName: "Системы",
+      firstName: "Admin",
+      lastName: "User",
       role: "superuser",
     });
 
-
+    console.log("Admin user created: admin/admin123");
   } catch (error) {
-    console.error("Ошибка при создании суперпользователя:", error);
+    console.error("Error creating admin user:", error);
   }
 }
