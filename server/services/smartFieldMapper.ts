@@ -5,6 +5,8 @@ interface FieldMappingResult {
   contactFields: any;
   leadFields: any;
   customFields: any;
+  notes: any[];
+  tasks: any[];
 }
 
 export class SmartFieldMapper {
@@ -24,7 +26,9 @@ export class SmartFieldMapper {
     const result: FieldMappingResult = {
       contactFields: {},
       leadFields: {},
-      customFields: {}
+      customFields: {},
+      notes: [],
+      tasks: []
     };
 
     if (!fieldMappings || Object.keys(fieldMappings).length === 0) {
@@ -124,8 +128,9 @@ export class SmartFieldMapper {
    */
   private async determineFieldInfo(targetFieldId: string, targetCrm: 'amocrm' | 'lptracker', userId: string): Promise<{
     isStandard: boolean;
-    standardType?: 'name' | 'phone' | 'email' | 'price';
+    standardType?: 'name' | 'phone' | 'email' | 'price' | 'note' | 'task';
     entity?: 'contact' | 'lead';
+    action?: 'note' | 'task';
   } | null> {
     // Стандартные поля
     const standardFields = {
@@ -134,7 +139,9 @@ export class SmartFieldMapper {
       'email': { isStandard: true, standardType: 'email' as const },
       'first_name': { isStandard: true, standardType: 'name' as const },
       'last_name': { isStandard: true, standardType: 'name' as const },
-      'price': { isStandard: true, standardType: 'price' as const }
+      'price': { isStandard: true, standardType: 'price' as const },
+      'note': { isStandard: true, standardType: 'note' as const, action: 'note' as const },
+      'task': { isStandard: true, standardType: 'task' as const, action: 'task' as const }
     };
 
     if (standardFields[targetFieldId]) {
@@ -178,6 +185,19 @@ export class SmartFieldMapper {
       result.contactFields.name = sourceValue;
     } else if (standardType === 'price') {
       result.leadFields.price = sourceValue;
+    } else if (standardType === 'note') {
+      // Создаем примечание
+      result.notes.push({
+        note_type: 'common',
+        text: sourceValue
+      });
+    } else if (standardType === 'task') {
+      // Создаем задачу
+      result.tasks.push({
+        text: sourceValue,
+        task_type_id: 1, // Звонок по умолчанию
+        complete_till: Math.floor((Date.now() + 24 * 60 * 60 * 1000) / 1000) // Завтра
+      });
     } else if (standardType === 'phone') {
       if (targetCrm === 'lptracker') {
         result.contactFields.phone = sourceValue;
@@ -369,16 +389,19 @@ export class SmartFieldMapper {
       leadFields: { standard: [], custom: [] }
     };
 
-    // Стандартные поля
+    // Стандартные поля контакта
     result.contactFields.standard = [
-      { id: 'name', name: 'Имя', type: 'standard' },
+      { id: 'name', name: 'Имя контакта', type: 'standard' },
       { id: 'phone', name: 'Телефон', type: 'standard' },
       { id: 'email', name: 'Email', type: 'standard' }
     ];
 
+    // Стандартные поля сделки + действия
     result.leadFields.standard = [
       { id: 'name', name: 'Название сделки', type: 'standard' },
-      { id: 'price', name: 'Бюджет', type: 'standard' }
+      { id: 'price', name: 'Бюджет', type: 'standard' },
+      { id: 'note', name: '📝 Примечание к сделке', type: 'action', description: 'Создать текстовое примечание' },
+      { id: 'task', name: '📋 Задача', type: 'action', description: 'Создать задачу-напоминание' }
     ];
 
     try {

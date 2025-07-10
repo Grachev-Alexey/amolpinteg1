@@ -232,15 +232,61 @@ export class AmoCrmService {
 
       await this.logService.log(userId, 'info', 'Starting AmoCRM sync', { webhookData, searchBy, userId }, 'amocrm');
 
+      // Применяем SmartFieldMapper для маппинга полей
+      if (webhookData.fieldMappings && Object.keys(webhookData.fieldMappings).length > 0) {
+        const mappedFields = await this.smartFieldMapper.smartMapFields(
+          userId,
+          webhookData.fieldMappings,
+          webhookData,
+          'amocrm'
+        );
+
+        // Объединяем замапированные поля с данными webhook
+        if (mappedFields.contactFields && Object.keys(mappedFields.contactFields).length > 0) {
+          Object.assign(webhookData, mappedFields.contactFields);
+        }
+        if (mappedFields.leadFields && Object.keys(mappedFields.leadFields).length > 0) {
+          Object.assign(webhookData, mappedFields.leadFields);
+        }
+
+        // Добавляем примечания и задачи
+        if (mappedFields.notes && mappedFields.notes.length > 0) {
+          webhookData.notes = mappedFields.notes;
+        }
+        if (mappedFields.tasks && mappedFields.tasks.length > 0) {
+          webhookData.tasks = mappedFields.tasks;
+        }
+
+        await this.logService.log(userId, 'info', 'Smart Field Mapping применен', { 
+          originalFields: Object.keys(webhookData.fieldMappings),
+          mappedContactFields: Object.keys(mappedFields.contactFields),
+          mappedLeadFields: Object.keys(mappedFields.leadFields),
+          notesCount: mappedFields.notes?.length || 0,
+          tasksCount: mappedFields.tasks?.length || 0
+        }, 'amocrm');
+      }
+
       // 1. Найти или создать контакт (с включенными сделками)
       const contact = await this.findOrCreateContact(userId, baseUrl, apiKey, webhookData, searchBy);
       
       // 2. Найти или создать сделку для контакта (используя данные из контакта)
       const deal = await this.findOrCreateDeal(userId, baseUrl, apiKey, contact.id, webhookData, contact._embedded?.leads);
 
+      // 3. Создать примечания если есть
+      if (webhookData.notes && webhookData.notes.length > 0) {
+        await this.createNotes(userId, baseUrl, apiKey, deal.id, webhookData.notes);
+      }
+
+      // 4. Создать задачи если есть
+      if (webhookData.tasks && webhookData.tasks.length > 0) {
+        await this.createTasks(userId, baseUrl, apiKey, deal.id, webhookData.tasks);
+      }
+
       await this.logService.log(userId, 'info', 'AmoCRM sync completed', { 
         contact: { id: contact.id, name: contact.name },
-        deal: { id: deal.id, name: deal.name }
+        deal: { id: deal.id, name: deal.name },
+        notesCreated: webhookData.notes?.length || 0,
+        tasksCreated: webhookData.tasks?.length || 0
       }, 'amocrm');
 
       return { contact, deal };
@@ -476,6 +522,86 @@ export class AmoCrmService {
         "sync",
       );
       throw error;
+    }
+  }
+
+  /**
+   * Создает примечания к сделке
+   */
+  async createNotes(userId: string, baseUrl: string, apiKey: string, leadId: number, notes: any[]): Promise<void> {
+    try {
+      for (const note of notes) {
+        const noteData = {
+          entity_id: leadId,
+          entity_type: 'leads',
+          note_type: note.note_type || 'common',
+          params: {
+            text: note.text
+          }
+        };
+
+        const response = await fetch(`${baseUrl}/leads/${leadId}/notes`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify([noteData]),
+        });
+
+        if (response.ok) {
+          await this.logService.log(userId, 'info', 'Примечание создано', { leadId, text: note.text }, 'amocrm');
+        } else {
+          const errorText = await response.text();
+          await this.logService.log(userId, 'warning', 'Ошибка создания примечания', { 
+            leadId, 
+            error: errorText,
+            status: response.status 
+          }, 'amocrm');
+        }
+      }
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'Ошибка при создании примечаний', { error: error.message, leadId }, 'amocrm');
+    }
+  }
+
+  /**
+   * Создает задачи для сделки
+   */
+  async createTasks(userId: string, baseUrl: string, apiKey: string, leadId: number, tasks: any[]): Promise<void> {
+    try {
+      for (const task of tasks) {
+        const taskData = {
+          text: task.text,
+          task_type_id: task.task_type_id || 1, // 1 = звонок
+          entity_id: leadId,
+          entity_type: 'leads',
+          complete_till: task.complete_till || Math.floor((Date.now() + 24 * 60 * 60 * 1000) / 1000), // Завтра
+          responsible_user_id: task.responsible_user_id || null // Будет назначен на текущего пользователя
+        };
+
+        const response = await fetch(`${baseUrl}/tasks`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify([taskData]),
+        });
+
+        if (response.ok) {
+          await this.logService.log(userId, 'info', 'Задача создана', { leadId, text: task.text }, 'amocrm');
+        } else {
+          const errorText = await response.text();
+          await this.logService.log(userId, 'warning', 'Ошибка создания задачи', { 
+            leadId, 
+            error: errorText,
+            status: response.status 
+          }, 'amocrm');
+        }
+      }
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'Ошибка при создании задач', { error: error.message, leadId }, 'amocrm');
     }
   }
 

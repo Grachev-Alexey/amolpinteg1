@@ -14,7 +14,7 @@ interface FieldMapping {
 interface FieldMappingEditorProps {
   mappings: FieldMapping[];
   sourceFields: Array<{ id: string; name: string; type?: string }>;
-  targetFields: Array<{ id: string; name: string; type?: string }>;
+  targetFields: Array<{ id: string; name: string; type?: string; description?: string }>;
   onMappingsChange: (mappings: FieldMapping[]) => void;
   sourceTitle: string;
   targetTitle: string;
@@ -161,17 +161,24 @@ export default function FieldMappingEditor({
                               value={field.id}
                               disabled={isUsed}
                             >
-                              <div className="flex items-center justify-between w-full">
-                                <span>{field.name}</span>
-                                {field.type && (
-                                  <Badge variant="secondary" className="ml-2 text-xs">
-                                    {field.type}
-                                  </Badge>
-                                )}
-                                {isUsed && (
-                                  <Badge variant="outline" className="ml-2 text-xs">
-                                    Используется
-                                  </Badge>
+                              <div className="flex flex-col">
+                                <div className="flex items-center justify-between w-full">
+                                  <span>{field.name}</span>
+                                  <div className="flex gap-1">
+                                    {field.type && (
+                                      <Badge variant="secondary" className="ml-2 text-xs">
+                                        {field.type}
+                                      </Badge>
+                                    )}
+                                    {isUsed && (
+                                      <Badge variant="outline" className="ml-2 text-xs">
+                                        Используется
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                {field.description && (
+                                  <span className="text-xs text-muted-foreground mt-1">{field.description}</span>
                                 )}
                               </div>
                             </SelectItem>

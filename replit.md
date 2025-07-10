@@ -19,6 +19,14 @@ Preferred communication style: Simple, everyday language.
 - ✓ System now properly uses individual user's CRM metadata for field mapping
 - ✓ Added comprehensive logging for field mapping operations
 
+### Extended Field Mapping Capabilities (July 10, 2025)
+- ✓ Expanded mapping system to support AmoCRM notes and tasks
+- ✓ Added special mapping targets: 'note' for deal comments, 'task' for reminders
+- ✓ Created `createNotes` and `createTasks` methods in AmoCRM service
+- ✓ Enhanced FieldMappingEditor to show field descriptions and better categorization
+- ✓ Added API endpoint `/api/field-mapping/available-fields/:targetCrm` for dynamic field loading
+- ✓ System now supports mapping to: contact fields, lead fields, notes, tasks, and future entities
+
 
 ## System Architecture
 
