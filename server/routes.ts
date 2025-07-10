@@ -1236,7 +1236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log('[DEBUG] Returning webhook statuses:', webhookStatuses);
+      console.log('[DEBUG] Returning webhook statuses:', JSON.stringify(webhookStatuses, null, 2));
       res.json({ webhooks: webhookStatuses });
     } catch (error) {
       console.error("Error fetching webhook status:", error);

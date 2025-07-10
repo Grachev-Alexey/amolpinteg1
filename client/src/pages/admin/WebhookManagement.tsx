@@ -172,6 +172,14 @@ export default function WebhookManagement() {
                 (w: any) => w.userId === user.userId
               );
               const isWebhookActive = userWebhook?.webhookActive || false;
+              
+              // Debug logging
+              console.log(`[DEBUG Frontend] User ${user.username} (${user.userId}):`, {
+                user,
+                userWebhook,
+                isWebhookActive,
+                webhookStatusData: webhookStatus
+              });
 
               return (
                 <Card key={user.userId}>
