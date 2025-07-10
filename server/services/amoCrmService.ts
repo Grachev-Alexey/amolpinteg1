@@ -1,13 +1,16 @@
 import { IStorage } from "../storage";
 import { LogService } from "./logService";
+import { SmartFieldMapper } from "./smartFieldMapper";
 
 export class AmoCrmService {
   private storage: IStorage;
   private logService: LogService;
+  private smartFieldMapper: SmartFieldMapper;
 
   constructor(storage: IStorage) {
     this.storage = storage;
     this.logService = new LogService(storage);
+    this.smartFieldMapper = new SmartFieldMapper(storage);
   }
 
   async testConnection(subdomain: string, apiKey: string): Promise<boolean> {
@@ -209,6 +212,11 @@ export class AmoCrmService {
   }
 
   async syncToAmoCrm(userId: string, webhookData: any, searchBy: string = "phone"): Promise<any> {
+    await this.logService.log(userId, 'info', 'Starting AmoCRM sync with Smart Field Mapping', { 
+      webhookData, 
+      searchBy,
+      hasFieldMappings: !!(webhookData.fieldMappings && Object.keys(webhookData.fieldMappings).length > 0)
+    }, 'amocrm');
     try {
       const settings = await this.storage.getAmoCrmSettings(userId);
       if (!settings) {

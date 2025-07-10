@@ -11,6 +11,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **July 10, 2025**: Implemented Smart Field Mapping system
+  - Created SmartFieldMapper service for intelligent field placement
+  - System now automatically determines contact vs lead fields using CRM metadata
+  - Eliminated manual field placement - fields are mapped based on target field type
+  - Enhanced both AmoCRM and LPTracker services with smart mapping
+- **July 10, 2025**: Fixed contact name mapping priority (first_name > name > deal_name)
 - **July 10, 2025**: Migrated project from Replit Agent to standard Replit environment
 - **Optimization**: Updated AmoCRM service to use `with=leads` parameter when searching contacts, reducing API calls
 - **Database**: PostgreSQL database provisioned and migrations applied
@@ -49,9 +55,10 @@ The application follows a full-stack architecture with clear separation between 
 - **System Logs**: Comprehensive audit trail
 
 ### Service Layer
-- **AmoCrmService**: Handles API connections, metadata retrieval, and data synchronization
-- **LpTrackerService**: Manages LPTracker API interactions and lead processing
-- **WebhookService**: Processes incoming webhooks from external systems
+- **SmartFieldMapper**: Intelligent field mapping using CRM metadata to automatically determine field placement
+- **AmoCrmService**: Handles API connections, metadata retrieval, and data synchronization with smart mapping
+- **LpTrackerService**: Manages LPTracker API interactions and lead processing with smart mapping
+- **WebhookService**: Processes incoming webhooks from external systems with enhanced field mapping
 - **FileService**: Manages XLSX file uploads and background processing
 - **LogService**: Centralized logging for all system operations
 
@@ -69,9 +76,10 @@ The application follows a full-stack architecture with clear separation between 
 3. **Metadata Sync**: System caches external service metadata for rule construction
 4. **Rule Creation**: Users build conditional logic using visual interface
 5. **Webhook Processing**: Incoming webhooks trigger rule evaluation
-6. **Data Transformation**: Rules execute actions based on configured conditions
-7. **File Processing**: XLSX uploads are processed in background with status tracking
-8. **Logging**: All operations are logged for audit and debugging
+6. **Smart Field Mapping**: System automatically determines field placement using metadata
+7. **Data Transformation**: Rules execute actions with intelligent field distribution
+8. **File Processing**: XLSX uploads are processed in background with status tracking
+9. **Logging**: All operations are logged for audit and debugging
 
 ## External Dependencies
 

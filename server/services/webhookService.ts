@@ -2,18 +2,21 @@ import { IStorage } from "../storage";
 import { LogService } from "./logService";
 import { AmoCrmService } from "./amoCrmService";
 import { LpTrackerService } from "./lpTrackerService";
+import { SmartFieldMapper } from "./smartFieldMapper";
 
 export class WebhookService {
   private storage: IStorage;
   private logService: LogService;
   private amoCrmService: AmoCrmService;
   private lpTrackerService: LpTrackerService;
+  private smartFieldMapper: SmartFieldMapper;
 
   constructor(storage: IStorage) {
     this.storage = storage;
     this.logService = new LogService(storage);
     this.amoCrmService = new AmoCrmService(storage);
     this.lpTrackerService = new LpTrackerService(storage);
+    this.smartFieldMapper = new SmartFieldMapper(storage);
   }
 
   async handleAmoCrmWebhook(payload: any): Promise<void> {
@@ -567,8 +570,11 @@ export class WebhookService {
             webhookDataBefore: webhookData
           }, 'webhook');
 
-          // Применяем маппинг полей если он настроен
+          // Применяем маппинг полей если он настроен (старый способ)
           const mappedWebhookData = this.applyFieldMapping(webhookData, action.fieldMappings || {}, eventData);
+          
+          // Добавляем fieldMappings в данные для Smart Field Mapper
+          mappedWebhookData.fieldMappings = action.fieldMappings || {};
 
           switch (action.type) {
             case 'sync_to_amocrm':

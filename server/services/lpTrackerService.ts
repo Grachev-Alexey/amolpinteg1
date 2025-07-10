@@ -1,13 +1,16 @@
 import { IStorage } from "../storage";
 import { LogService } from "./logService";
+import { SmartFieldMapper } from "./smartFieldMapper";
 
 export class LpTrackerService {
   private storage: IStorage;
   private logService: LogService;
+  private smartFieldMapper: SmartFieldMapper;
 
   constructor(storage: IStorage) {
     this.storage = storage;
     this.logService = new LogService(storage);
+    this.smartFieldMapper = new SmartFieldMapper(storage);
   }
 
   private encrypt(text: string): string {
@@ -34,7 +37,7 @@ export class LpTrackerService {
       const token = await this.getAuthToken(globalSettings);
       const baseUrl = `https://${globalSettings.address}`;
 
-      await this.logService.log(userId, 'info', 'Starting LPTracker sync', { webhookData, searchBy }, 'lptracker');
+      await this.logService.log(userId, 'info', 'Starting LPTracker sync with Smart Field Mapping', { webhookData, searchBy }, 'lptracker');
 
       // 1. Найти или создать контакт
       const contact = await this.findOrCreateContact(userId, baseUrl, token, userSettings.projectId, webhookData, searchBy);
@@ -56,7 +59,23 @@ export class LpTrackerService {
 
   private async findOrCreateContact(userId: string, baseUrl: string, token: string, projectId: string, webhookData: any, searchBy: string): Promise<any> {
     try {
-      // Поиск контакта (LPTracker API может не поддерживать поиск, создаем новый)
+      // Используем Smart Field Mapper для умного маппирования полей
+      // Формируем структуру данных, ожидаемую Smart Field Mapper
+      const sourceDataForMapper = {
+        leadDetails: webhookData.leadDetails || {},
+        contactsDetails: webhookData.contactsDetails || [],
+        contact: webhookData.contact || {},
+        ...webhookData
+      };
+      
+      const mappedFields = await this.smartFieldMapper.smartMapFields(
+        userId, 
+        webhookData.fieldMappings || {}, 
+        sourceDataForMapper, 
+        'lptracker'
+      );
+
+      // Базовые данные контакта
       const contactData = {
         name: webhookData.first_name || webhookData.name || '',
         profession: webhookData.profession || '',
@@ -65,13 +84,26 @@ export class LpTrackerService {
         fields: {}
       };
 
-      await this.logService.log(userId, 'info', 'LPTracker - Данные для создания контакта', { 
-        webhookDataName: webhookData.name,
-        webhookDataFirstName: webhookData.first_name,
-        contactDataName: contactData.name,
-        contactDataFields: contactData.fields,
-        lpTrackerCustomFields: webhookData.lptracker_custom_fields,
-        lpTrackerContactFields: webhookData.lptracker_contact_fields
+      // Применяем умно замапированные поля контакта
+      if (mappedFields.contactFields.name) {
+        contactData.name = mappedFields.contactFields.name;
+      }
+      
+      // Объединяем кастомные поля контакта
+      contactData.fields = { 
+        ...contactData.fields, 
+        ...mappedFields.contactFields,
+        ...webhookData.lptracker_custom_fields || {} 
+      };
+
+      await this.logService.log(userId, 'info', 'LPTracker - Smart Field Mapper результат для контакта', { 
+        originalWebhookData: {
+          name: webhookData.name,
+          first_name: webhookData.first_name,
+          lptracker_custom_fields: webhookData.lptracker_custom_fields
+        },
+        mappedFields,
+        finalContactData: contactData
       }, 'lptracker');
 
       // Добавляем контактные данные
@@ -87,16 +119,6 @@ export class LpTrackerService {
           type: 'email',
           data: webhookData.email
         });
-      }
-
-      // Добавляем кастомные поля контакта
-      if (webhookData.lptracker_contact_fields) {
-        contactData.fields = webhookData.lptracker_contact_fields;
-      }
-      
-      // Также проверяем lptracker_custom_fields (это может быть основной источник полей)
-      if (webhookData.lptracker_custom_fields) {
-        contactData.fields = { ...contactData.fields, ...webhookData.lptracker_custom_fields };
       }
 
       const requestBody = {
@@ -139,6 +161,22 @@ export class LpTrackerService {
 
   private async findOrCreateLead(userId: string, baseUrl: string, token: string, contactId: number, webhookData: any): Promise<any> {
     try {
+      // Используем Smart Field Mapper для умного маппирования полей лида
+      // Формируем структуру данных, ожидаемую Smart Field Mapper  
+      const sourceDataForMapper = {
+        leadDetails: webhookData.leadDetails || {},
+        contactsDetails: webhookData.contactsDetails || [],
+        contact: webhookData.contact || {},
+        ...webhookData
+      };
+      
+      const mappedFields = await this.smartFieldMapper.smartMapFields(
+        userId, 
+        webhookData.fieldMappings || {}, 
+        sourceDataForMapper, 
+        'lptracker'
+      );
+
       // Создание нового лида (LPTracker всегда создает новый лид)
       const leadData = {
         contact_id: contactId,
@@ -153,15 +191,21 @@ export class LpTrackerService {
         custom: {}
       };
 
-      // Добавляем кастомные поля
-      if (webhookData.custom_fields) {
-        leadData.custom = webhookData.custom_fields;
-      }
+      // Применяем умно замапированные кастомные поля лида
+      leadData.custom = { 
+        ...leadData.custom, 
+        ...mappedFields.leadFields,
+        ...webhookData.lptracker_custom_fields || {} 
+      };
 
-      // Добавляем кастомные поля из маппинга
-      if (webhookData.lptracker_custom_fields) {
-        leadData.custom = { ...leadData.custom, ...webhookData.lptracker_custom_fields };
-      }
+      await this.logService.log(userId, 'info', 'LPTracker - Smart Field Mapper результат для лида', { 
+        originalWebhookData: {
+          deal_name: webhookData.deal_name,
+          lptracker_custom_fields: webhookData.lptracker_custom_fields
+        },
+        mappedFields,
+        finalLeadData: leadData
+      }, 'lptracker');
 
       const createResponse = await fetch(`${baseUrl}/lead`, {
         method: 'POST',
