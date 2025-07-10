@@ -228,36 +228,60 @@ export default function RuleConstructor({
     return [];
   };
 
-  // Helper function to get target fields based on action type
+  // Dynamic target fields loading with descriptions
   const getTargetFields = (actionType: string) => {
+    const targetCrm = actionType === 'sync_to_amocrm' ? 'amocrm' : 'lptracker';
+    
+    // Use React Query to fetch available fields with descriptions
+    const { data: availableFieldsData } = useQuery({
+      queryKey: [`/api/field-mapping/available-fields/${targetCrm}`],
+      enabled: !!actionType, // Only fetch when action type is selected
+      retry: false,
+    });
+
+    if (availableFieldsData) {
+      return availableFieldsData.map((field: any) => ({
+        id: field.id,
+        name: field.name,
+        type: field.type,
+        description: field.description
+      }));
+    }
+
+    // Fallback to old method while loading
     if (actionType === 'sync_to_amocrm') {
       return [
-        { id: 'name', name: 'Имя контакта' },
-        { id: 'phone', name: 'Телефон' },
-        { id: 'email', name: 'Email' },
-        { id: 'deal_name', name: 'Название сделки' },
-        { id: 'price', name: 'Бюджет сделки' },
+        { id: 'name', name: 'Имя контакта', description: 'Имя контакта в CRM' },
+        { id: 'phone', name: 'Телефон', description: 'Основной номер телефона' },
+        { id: 'email', name: 'Email', description: 'Электронная почта' },
+        { id: 'note', name: 'Примечание к сделке', description: 'Текстовый комментарий к сделке' },
+        { id: 'task', name: 'Задача', description: 'Напоминание или задача в CRM' },
+        { id: 'price', name: 'Бюджет сделки', description: 'Сумма сделки' },
         ...leadsFields.map(field => ({
           id: field.id?.toString() || '',
-          name: field.name || ''
+          name: field.name || '',
+          description: `Кастомное поле сделки: ${field.name}`
         })),
         ...contactsFields.map(field => ({
           id: field.id?.toString() || '',
-          name: field.name || ''
+          name: field.name || '',
+          description: `Кастомное поле контакта: ${field.name}`
         }))
       ];
     } else if (actionType === 'sync_to_lptracker') {
       return [
-        { id: 'name', name: 'Имя лида' },
-        { id: 'phone', name: 'Телефон' },
-        { id: 'email', name: 'Email' },
+        { id: 'name', name: 'Имя лида', description: 'Имя лида в LPTracker' },
+        { id: 'phone', name: 'Телефон', description: 'Номер телефона лида' },
+        { id: 'email', name: 'Email', description: 'Email лида' },
         ...lpTrackerContactFields.map(field => ({
           id: field.id?.toString() || '',
-          name: field.name || ''
+          name: field.name || '',
+          description: `Поле контакта: ${field.name}`
         })),
         ...lpTrackerCustomFields.map(field => ({
           id: field.id?.toString() || '',
-          name: field.name || ''
+          name: field.name || '',
+          description: `Кастомное поле: ${field.name}`
         }))
       ];
     }
