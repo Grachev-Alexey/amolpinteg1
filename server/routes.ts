@@ -706,7 +706,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const globalSettings = await storage.getLpTrackerGlobalSettings();
           if (globalSettings?.login && globalSettings?.password && globalSettings?.isActive) {
             lpTrackerStatus = 'configured';
-            webhookStatus = globalSettings?.webhookActive ? 'active' : 'inactive';
+            // Check user-specific webhook status
+            webhookStatus = lpTrackerSettings?.webhookActive ? 'active' : 'not_configured';
           }
         }
 
@@ -785,7 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           webhooks.push({
             username: user.username,
             projectId: lpTrackerSettings.projectId,
-            status: lpTrackerSettings.projectId ? 'configured' : 'not_configured',
+            status: lpTrackerSettings.webhookActive ? 'active' : 'not_configured',
             activityCount: userLogs.length,
             lastActivity: lastActivity ? new Date(lastActivity).toISOString() : null
           });
