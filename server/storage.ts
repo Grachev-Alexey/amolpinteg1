@@ -4,6 +4,7 @@ import {
   lpTrackerSettings,
   lpTrackerGlobalSettings,
   amoCrmMetadata,
+  lpTrackerMetadata,
   syncRules,
   fileUploads,
   callResults,
@@ -18,6 +19,8 @@ import {
   type InsertLpTrackerGlobalSettings,
   type AmoCrmMetadata,
   type InsertAmoCrmMetadata,
+  type LpTrackerMetadata,
+  type InsertLpTrackerMetadata,
   type SyncRule,
   type InsertSyncRule,
   type FileUpload,
@@ -56,6 +59,10 @@ export interface IStorage {
   getAmoCrmMetadata(userId: string, type: string): Promise<AmoCrmMetadata | undefined>;
   saveAmoCrmMetadata(metadata: InsertAmoCrmMetadata): Promise<AmoCrmMetadata>;
   updateAmoCrmMetadata(userId: string, type: string, data: any): Promise<AmoCrmMetadata | undefined>;
+  
+  getLpTrackerMetadata(userId: string, type: string): Promise<LpTrackerMetadata | undefined>;
+  saveLpTrackerMetadata(metadata: InsertLpTrackerMetadata): Promise<LpTrackerMetadata>;
+  updateLpTrackerMetadata(userId: string, type: string, data: any): Promise<LpTrackerMetadata | undefined>;
 
   // Sync rules operations
   getSyncRules(userId: string): Promise<SyncRule[]>;
@@ -293,6 +300,46 @@ export class DatabaseStorage implements IStorage {
       .update(amoCrmMetadata)
       .set({ data, updatedAt: new Date() })
       .where(and(eq(amoCrmMetadata.userId, userId), eq(amoCrmMetadata.type, type)))
+      .returning();
+    return updated;
+  }
+
+  // LPTracker metadata operations
+  async getLpTrackerMetadata(userId: string, type: string): Promise<LpTrackerMetadata | undefined> {
+    const [metadata] = await db
+      .select()
+      .from(lpTrackerMetadata)
+      .where(and(eq(lpTrackerMetadata.userId, userId), eq(lpTrackerMetadata.type, type)));
+    return metadata;
+  }
+
+  async saveLpTrackerMetadata(metadata: InsertLpTrackerMetadata): Promise<LpTrackerMetadata> {
+    // Check if metadata already exists
+    const existing = await this.getLpTrackerMetadata(metadata.userId, metadata.type);
+    
+    if (existing) {
+      // Update existing metadata
+      const [updated] = await db
+        .update(lpTrackerMetadata)
+        .set({ data: metadata.data, updatedAt: new Date() })
+        .where(and(eq(lpTrackerMetadata.userId, metadata.userId), eq(lpTrackerMetadata.type, metadata.type)))
+        .returning();
+      return updated;
+    } else {
+      // Create new metadata
+      const [created] = await db
+        .insert(lpTrackerMetadata)
+        .values(metadata)
+        .returning();
+      return created;
+    }
+  }
+
+  async updateLpTrackerMetadata(userId: string, type: string, data: any): Promise<LpTrackerMetadata | undefined> {
+    const [updated] = await db
+      .update(lpTrackerMetadata)
+      .set({ data, updatedAt: new Date() })
+      .where(and(eq(lpTrackerMetadata.userId, userId), eq(lpTrackerMetadata.type, type)))
       .returning();
     return updated;
   }

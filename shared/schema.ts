@@ -82,6 +82,18 @@ export const amoCrmMetadata = pgTable("amocrm_metadata", {
   userIdTypeUnique: index("amocrm_metadata_user_id_type_unique").on(table.userId, table.type)
 }));
 
+// Cached metadata from LPTracker
+export const lpTrackerMetadata = pgTable("lptracker_metadata", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: varchar("type").notNull(), // 'projects', 'leads', 'contacts', 'funnels'
+  data: jsonb("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdTypeUnique: index("lptracker_metadata_user_id_type_unique").on(table.userId, table.type)
+}));
+
 // Synchronization rules
 export const syncRules = pgTable("sync_rules", {
   id: serial("id").primaryKey(),
@@ -152,6 +164,9 @@ export type LpTrackerSettings = typeof lpTrackerSettings.$inferSelect;
 export type InsertAmoCrmMetadata = typeof amoCrmMetadata.$inferInsert;
 export type AmoCrmMetadata = typeof amoCrmMetadata.$inferSelect;
 
+export type InsertLpTrackerMetadata = typeof lpTrackerMetadata.$inferInsert;
+export type LpTrackerMetadata = typeof lpTrackerMetadata.$inferSelect;
+
 export type InsertSyncRule = typeof syncRules.$inferInsert;
 export type SyncRule = typeof syncRules.$inferSelect;
 
@@ -178,6 +193,12 @@ export const insertLpTrackerGlobalSettingsSchema = createInsertSchema(lpTrackerG
 });
 
 export const insertLpTrackerSettingsSchema = createInsertSchema(lpTrackerSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLpTrackerMetadataSchema = createInsertSchema(lpTrackerMetadata).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

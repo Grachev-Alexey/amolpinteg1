@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { handleUnauthorizedError } from "@/lib/authRedirect";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import RuleConstructor from "@/components/RuleConstructor";
@@ -38,14 +39,7 @@ export default function RuleBuilder() {
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Необходима авторизация",
-          description: "Выполняется перенаправление на страницу входа...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        handleUnauthorizedError(error, toast);
         return;
       }
       toast({
@@ -71,14 +65,7 @@ export default function RuleBuilder() {
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Необходима авторизация",
-          description: "Выполняется перенаправление на страницу входа...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        handleUnauthorizedError(error, toast);
         return;
       }
       toast({
@@ -103,14 +90,7 @@ export default function RuleBuilder() {
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Необходима авторизация",
-          description: "Выполняется перенаправление на страницу входа...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        handleUnauthorizedError(error, toast);
         return;
       }
       toast({
@@ -124,14 +104,7 @@ export default function RuleBuilder() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Необходима авторизация",
-        description: "Выполняется перенаправление на страницу входа...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
+      handleUnauthorizedError(null, toast);
       return;
     }
   }, [isAuthenticated, isLoading, toast]);

@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { handleUnauthorizedError } from "@/lib/authRedirect";
 import {
   Settings as SettingsIcon,
   CheckCircle,
@@ -89,14 +91,7 @@ export default function Settings() {
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Необходима авторизация",
-          description: "Выполняется перенаправление на страницу входа...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        handleUnauthorizedError(error, toast);
         return;
       }
       toast({
@@ -120,14 +115,7 @@ export default function Settings() {
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Необходима авторизация",
-          description: "Выполняется перенаправление на страницу входа...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        handleUnauthorizedError(error, toast);
         return;
       }
       toast({
@@ -156,14 +144,7 @@ export default function Settings() {
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Необходима авторизация",
-          description: "Выполняется перенаправление на страницу входа...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        handleUnauthorizedError(error, toast);
         return;
       }
       toast({
@@ -201,14 +182,7 @@ export default function Settings() {
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Необходима авторизация",
-          description: "Выполняется перенаправление на страницу входа...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        handleUnauthorizedError(error, toast);
         return;
       }
       toast({
@@ -232,14 +206,7 @@ export default function Settings() {
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Необходима авторизация",
-          description: "Выполняется перенаправление на страницу входа...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        handleUnauthorizedError(error, toast);
         return;
       }
       toast({
@@ -253,14 +220,7 @@ export default function Settings() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Необходима авторизация",
-        description: "Выполняется перенаправление на страницу входа...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
+      handleUnauthorizedError(null, toast);
       return;
     }
   }, [isAuthenticated, isLoading, toast]);

@@ -6,6 +6,17 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 ## Recent Changes
 
+**July 10, 2025 - Complete LPTracker Metadata Integration**
+- ✓ Fixed critical bug where LPTracker global settings API returned empty objects
+- ✓ Implemented comprehensive LPTracker metadata extraction system matching AmoCRM functionality
+- ✓ Added database schema for LPTracker metadata with proper storage methods and API endpoints
+- ✓ Created test connection and metadata refresh functionality for LPTracker integration
+- ✓ Eliminated all duplicate authorization error handling across multiple components
+- ✓ Centralized error handling with reusable handleUnauthorizedError function
+- ✓ Added API endpoints: /api/lptracker/test-connection, /api/lptracker/refresh-metadata, /api/lptracker/metadata/:type, /api/lptracker/projects
+- ✓ Enhanced LPTracker service with connection testing and project listing capabilities
+- ✓ Reduced code duplication in FileUpload.tsx, RuleBuilder.tsx, Settings.tsx, and CallResults.tsx
+
 **July 10, 2025 - UI Improvements and LPTracker Architecture Fix**
 - ✓ Fixed dark theme visibility issues in buttons, inputs, and text elements
 - ✓ Improved CSS styles for better contrast and readability in dark mode

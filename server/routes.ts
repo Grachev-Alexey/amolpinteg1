@@ -267,6 +267,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // LPTracker connection test
+  app.post('/api/lptracker/test-connection', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'superuser') {
+        return res.status(403).json({ message: 'Доступ запрещен. Требуется роль суперпользователя.' });
+      }
+
+      let { login, password, address } = req.body;
+      
+      // If credentials are empty, try to use saved settings
+      if (!login || !password) {
+        const settings = await storage.getLpTrackerGlobalSettings();
+        if (settings) {
+          login = settings.login;
+          password = settings.password;
+          address = settings.address;
+        }
+      }
+      
+      if (!login || !password) {
+        return res.json({ isValid: false, message: "Логин и пароль не предоставлены" });
+      }
+      
+      // Test connection
+      const testResult = await lpTrackerService.testConnection(login, password, address);
+      
+      if (testResult) {
+        res.json({ isValid: true });
+      } else {
+        res.json({ 
+          isValid: false, 
+          message: "Неверные учетные данные или проблема с подключением к LPTracker" 
+        });
+      }
+    } catch (error) {
+      console.error("Error testing LPTracker connection:", error);
+      res.status(500).json({ message: "Не удалось проверить подключение к LPTracker" });
+    }
+  });
+
+  // LPTracker metadata refresh
+  app.post('/api/lptracker/refresh-metadata', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      await lpTrackerService.refreshMetadata(userId);
+      await logService.log(userId, 'info', 'Метаданные LPTracker обновлены', {}, 'metadata');
+      res.json({ message: "Метаданные успешно обновлены" });
+    } catch (error) {
+      console.error("Error refreshing LPTracker metadata:", error);
+      res.status(500).json({ message: "Не удалось обновить метаданные" });
+    }
+  });
+
+  // Get LPTracker metadata
+  app.get('/api/lptracker/metadata/:type', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { type } = req.params;
+      
+      const metadata = await storage.getLpTrackerMetadata(userId, type);
+      res.json(metadata);
+    } catch (error) {
+      console.error("Error fetching LPTracker metadata:", error);
+      res.status(500).json({ message: "Не удалось получить метаданные" });
+    }
+  });
+
+  // Get LPTracker projects
+  app.get('/api/lptracker/projects', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const projects = await lpTrackerService.getProjects(userId);
+      res.json(projects);
+    } catch (error) {
+      console.error("Error fetching LPTracker projects:", error);
+      res.status(500).json({ message: "Не удалось получить список проектов" });
+    }
+  });
+
   // Check if LPTracker is configured globally
   app.get('/api/lptracker/global-status', requireAuth, async (req: any, res) => {
     try {
@@ -718,7 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/lptracker-settings', requireSuperuser, async (req: any, res) => {
     try {
       const settings = await storage.getLpTrackerGlobalSettings();
-      res.json(settings);
+      res.json(settings || {});
     } catch (error) {
       console.error("Error fetching LPTracker settings:", error);
       res.status(500).json({ message: "Не удалось получить настройки LPTracker" });

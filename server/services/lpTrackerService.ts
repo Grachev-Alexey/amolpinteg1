@@ -155,4 +155,137 @@ export class LpTrackerService {
       throw error;
     }
   }
+
+  async testConnection(login: string, password: string, address: string = 'direct.lptracker.ru'): Promise<boolean> {
+    try {
+      const baseUrl = `https://${address}/api`;
+      
+      const requestData = {
+        login,
+        password,
+        service: 'CRM Integration Test'
+      };
+
+      const response = await fetch(`${baseUrl}/getProjectList`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('LPTracker connection test failed:', error);
+      return false;
+    }
+  }
+
+  async refreshMetadata(userId: string): Promise<void> {
+    try {
+      const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+      if (!globalSettings) {
+        throw new Error('LPTracker global settings not configured');
+      }
+
+      const baseUrl = `https://${globalSettings.address}/api`;
+      
+      const requestData = {
+        login: globalSettings.login,
+        password: globalSettings.password,
+        service: globalSettings.service
+      };
+
+      // Get projects list
+      try {
+        const projectsResponse = await fetch(`${baseUrl}/getProjectList`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData),
+        });
+
+        if (projectsResponse.ok) {
+          const projects = await projectsResponse.json();
+          await this.storage.saveLpTrackerMetadata({
+            userId,
+            type: 'projects',
+            data: projects
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to fetch LPTracker projects:', error);
+      }
+
+      // Get leads structure (try to get sample lead data)
+      try {
+        const userSettings = await this.storage.getLpTrackerSettings(userId);
+        if (userSettings?.projectId) {
+          const leadsResponse = await fetch(`${baseUrl}/getLeadData`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...requestData,
+              project_id: userSettings.projectId,
+              limit: 1
+            }),
+          });
+
+          if (leadsResponse.ok) {
+            const leads = await leadsResponse.json();
+            await this.storage.saveLpTrackerMetadata({
+              userId,
+              type: 'leads',
+              data: leads
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch LPTracker leads:', error);
+      }
+
+      await this.logService.log(userId, 'info', 'Метаданные LPTracker обновлены', {}, 'metadata');
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'Ошибка при обновлении метаданных LPTracker', { error }, 'metadata');
+      throw error;
+    }
+  }
+
+  async getProjects(userId: string): Promise<any> {
+    try {
+      const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+      if (!globalSettings) {
+        throw new Error('LPTracker global settings not configured');
+      }
+
+      const baseUrl = `https://${globalSettings.address}/api`;
+      
+      const requestData = {
+        login: globalSettings.login,
+        password: globalSettings.password,
+        service: globalSettings.service
+      };
+
+      const response = await fetch(`${baseUrl}/getProjectList`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`LPTracker API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'Ошибка при получении проектов LPTracker', { error }, 'lptracker');
+      throw error;
+    }
+  }
 }
