@@ -6,6 +6,18 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 ## Recent Changes
 
+**July 10, 2025 - Critical Bug Fixes and UI Improvements Complete**
+- ✓ Fixed `isLoading` undefined error in RuleBuilder component (changed to `rulesLoading`)
+- ✓ Fixed AmoCRM connection test returning false positive results
+- ✓ Added `isConnected` field to AmoCRM settings database schema
+- ✓ Enhanced AmoCRM test connection to update connection status in database
+- ✓ Improved input field visibility in dark theme with better borders and contrast
+- ✓ Fixed CSS styling for form inputs, selects, and text areas in dark mode
+- ✓ Added proper focus states for form elements with primary color highlighting
+- ✓ Fixed duplicate code causing syntax errors in server routes
+- ✓ Enhanced connection status display to show actual connection state
+- ✓ All major UI issues resolved, application now fully functional
+
 **July 10, 2025 - Admin Integration Monitoring & Authentication Fix Complete**
 - ✓ Created comprehensive admin integration monitoring page with detailed status tracking
 - ✓ Added API endpoints for webhook status monitoring and user integration testing

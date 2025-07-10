@@ -34,8 +34,8 @@
   --popover-foreground: hsl(0, 0%, 98%);
   --card: hsl(240, 3.7%, 15.9%);
   --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
+  --border: hsl(240, 3.7%, 25%);
+  --input: hsl(240, 3.7%, 20%);
   --primary: hsl(246, 83%, 60%);
   --primary-foreground: hsl(0, 0%, 98%);
   --secondary: hsl(240, 3.7%, 15.9%);
@@ -148,6 +148,53 @@
   }
 
   .dark .text-gray-900 {
+    @apply text-foreground;
+  }
+
+  /* Improve input field visibility */
+  .dark input[type="text"], 
+  .dark input[type="email"], 
+  .dark input[type="password"], 
+  .dark input[type="url"], 
+  .dark textarea, 
+  .dark select {
+    @apply bg-input border-border text-foreground;
+    border-width: 1px;
+  }
+
+  .dark input[type="text"]:focus, 
+  .dark input[type="email"]:focus, 
+  .dark input[type="password"]:focus, 
+  .dark input[type="url"]:focus, 
+  .dark textarea:focus, 
+  .dark select:focus {
+    @apply border-primary ring-1 ring-primary;
+  }
+
+  /* Improve select field visibility */
+  .dark select {
+    @apply bg-input border-border text-foreground;
+    border-width: 1px;
+  }
+
+  /* Improve placeholder text visibility */
+  .dark input::placeholder, 
+  .dark textarea::placeholder {
+    @apply text-muted-foreground;
+  }
+
+  /* Fix dropdown menus */
+  .dark .dropdown-menu {
+    @apply bg-popover border-border text-foreground;
+  }
+
+  .dark .dropdown-item {
+    @apply text-foreground;
+  }
+
+  .dark .dropdown-item:hover {
+    @apply bg-accent text-accent-foreground;
+  }
     @apply text-foreground;
   }
 

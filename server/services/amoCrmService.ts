@@ -19,8 +19,6 @@ export class AmoCrmService {
 
       const url = `https://${baseUrl}/api/v4/leads/pipelines`;
 
-
-
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -28,14 +26,14 @@ export class AmoCrmService {
         },
       });
 
-
-
       if (!response.ok) {
         const errorText = await response.text();
-
+        console.error("AmoCRM API error:", response.status, errorText);
+        return false;
       }
 
-      return response.ok;
+      const data = await response.json();
+      return data && (data._embedded || data._links || Array.isArray(data));
     } catch (error) {
       console.error("AmoCRM connection test failed:", error);
       return false;

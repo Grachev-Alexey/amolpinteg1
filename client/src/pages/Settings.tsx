@@ -100,7 +100,7 @@ export default function Settings() {
         "POST",
         data,
       );
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.isValid) {
@@ -108,6 +108,7 @@ export default function Settings() {
           title: "Соединение установлено",
           description: "Подключение к AmoCRM успешно",
         });
+        queryClient.invalidateQueries({ queryKey: ["/api/amocrm/settings"] });
       } else {
         toast({
           title: "Ошибка подключения к AmoCRM",
@@ -116,6 +117,7 @@ export default function Settings() {
             "API ключ недействителен или истек. Создайте новый долгосрочный API ключ в настройках AmoCRM и убедитесь, что он имеет все необходимые права.",
           variant: "destructive",
         });
+        queryClient.invalidateQueries({ queryKey: ["/api/amocrm/settings"] });
       }
     },
     onError: (error) => {

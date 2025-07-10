@@ -44,6 +44,7 @@ export const amoCrmSettings = pgTable("amocrm_settings", {
   subdomain: varchar("subdomain").notNull(),
   apiKey: text("api_key").notNull(), // encrypted
   isActive: boolean("is_active").default(true),
+  isConnected: boolean("is_connected").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

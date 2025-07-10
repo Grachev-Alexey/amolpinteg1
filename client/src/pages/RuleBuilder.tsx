@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 
-import { useAuthRedirect } from "@/lib/auth";
+import { useAuthRedirect, isUnauthorizedError, handleUnauthorizedError } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
 import RuleConstructor from "@/components/RuleConstructor";
 import DataTable from "@/components/DataTable";
@@ -229,7 +229,7 @@ export default function RuleBuilder() {
     }
   ];
 
-  if (isLoading) {
+  if (rulesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
