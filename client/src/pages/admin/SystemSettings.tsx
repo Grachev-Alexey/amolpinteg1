@@ -68,8 +68,7 @@ export default function SystemSettings() {
 
   const testLpTrackerMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("/api/admin/lptracker/test-connection", "POST", data);
-      return response.json();
+      return apiRequest("/api/admin/lptracker/test-connection", "POST", data);
     },
     onSuccess: (data) => {
       if (data.success) {

@@ -65,8 +65,7 @@ export default function IntegrationsAndMonitoring() {
   // Test user integrations mutation
   const testUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const response = await apiRequest("/api/admin/test-user-integrations", "POST", { userId });
-      return response.json();
+      return apiRequest("/api/admin/test-user-integrations", "POST", { userId });
     },
     onSuccess: (data) => {
       toast({

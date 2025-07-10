@@ -137,17 +137,17 @@ export async function setupAuth(app: Express) {
         console.error("Error destroying session:", err);
         return res.status(500).json({ message: "Error logging out" });
       }
-      res.sendStatus(200);
+      res.status(200).json({ message: "Logged out successfully" });
     });
   });
 
   app.get("/api/user", async (req, res) => {
     const userId = (req as any).session?.userId;
-    if (!userId) return res.sendStatus(401);
+    if (!userId) return res.status(401).json({ message: "Authentication required" });
     
     try {
       const user = await storage.getUser(userId);
-      if (!user) return res.sendStatus(401);
+      if (!user) return res.status(401).json({ message: "User not found" });
       
       res.json({
         id: user.id,
@@ -162,7 +162,7 @@ export async function setupAuth(app: Express) {
       });
     } catch (error) {
       console.error("Error fetching user:", error);
-      res.sendStatus(500);
+      res.status(500).json({ message: "Server error" });
     }
   });
 }
