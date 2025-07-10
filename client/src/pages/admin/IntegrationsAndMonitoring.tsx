@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DataTable from "@/components/DataTable";
-import WebhookManager from "@/components/WebhookManager";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthRedirect } from "@/lib/auth";
 import {
@@ -205,10 +204,9 @@ export default function IntegrationsAndMonitoring() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-muted/30">
+        <TabsList className="grid w-full grid-cols-3 bg-muted/30">
           <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Обзор</TabsTrigger>
           <TabsTrigger value="integrations" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Интеграции</TabsTrigger>
-          <TabsTrigger value="webhooks" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Вебхуки</TabsTrigger>
           <TabsTrigger value="activity" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Активность</TabsTrigger>
         </TabsList>
 
@@ -363,10 +361,7 @@ export default function IntegrationsAndMonitoring() {
           </Card>
         </TabsContent>
 
-        {/* Webhooks Tab */}
-        <TabsContent value="webhooks" className="space-y-6">
-          <WebhookManager />
-        </TabsContent>
+
 
         {/* Activity Tab */}
         <TabsContent value="activity" className="space-y-6">

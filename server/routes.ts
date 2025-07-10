@@ -405,38 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/lptracker/webhook', requireSuperuser, async (req: any, res) => {
-    try {
-      const { webhookUrl } = req.body;
-      if (!webhookUrl) {
-        return res.status(400).json({ message: "URL вебхука обязателен" });
-      }
-      
-      const success = await lpTrackerService.setupWebhook(webhookUrl);
-      if (success) {
-        res.json({ message: "Вебхук успешно установлен" });
-      } else {
-        res.status(500).json({ message: "Не удалось установить вебхук" });
-      }
-    } catch (error) {
-      console.error("Error setting up LPTracker webhook:", error);
-      res.status(500).json({ message: "Не удалось установить вебхук" });
-    }
-  });
 
-  app.delete('/api/lptracker/webhook', requireSuperuser, async (req: any, res) => {
-    try {
-      const success = await lpTrackerService.removeWebhook();
-      if (success) {
-        res.json({ message: "Вебхук успешно удален" });
-      } else {
-        res.status(500).json({ message: "Не удалось удалить вебхук" });
-      }
-    } catch (error) {
-      console.error("Error removing LPTracker webhook:", error);
-      res.status(500).json({ message: "Не удалось удалить вебхук" });
-    }
-  });
 
   // GET endpoints для тестирования вебхуков (для отладки)
   app.get('/api/webhooks/amocrm', async (req, res) => {
