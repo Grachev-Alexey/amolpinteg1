@@ -155,7 +155,8 @@ export default function Settings() {
   };
 
   const handleTestConnection = () => {
-    testConnectionMutation.mutate(amoCrmData);
+    // Не передаем данные - backend будет использовать данные из БД
+    testConnectionMutation.mutate({});
   };
 
   const handleInputChange = (field: string, value: string) => {

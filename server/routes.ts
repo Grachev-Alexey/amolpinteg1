@@ -114,46 +114,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/amocrm/test-connection', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
-      let { subdomain, apiKey } = req.body;
       
-      console.log("AmoCRM test-connection received:", { 
-        subdomain, 
-        apiKeyLength: apiKey?.length || 0,
-        hasSubdomain: !!subdomain,
-        hasApiKey: !!apiKey
-      });
+      // Всегда используем только сохраненные настройки из базы данных
+      const settings = await storage.getAmoCrmSettings(userId);
       
-      // Если данные пустые, пытаемся использовать сохраненные
-      if (!apiKey || !subdomain) {
-        const settings = await storage.getAmoCrmSettings(userId);
-        if (settings) {
-          apiKey = apiKey || settings.apiKey;
-          subdomain = subdomain || settings.subdomain;
-          console.log("Using saved settings:", { 
-            subdomain, 
-            apiKeyLength: apiKey?.length || 0 
-          });
-        }
+      if (!settings) {
+        return res.json({ isValid: false, message: "Настройки AmoCRM не найдены. Сначала сохраните настройки." });
       }
       
+      const { subdomain, apiKey } = settings;
+      
       if (!apiKey) {
-        return res.json({ isValid: false, message: "API ключ не предоставлен" });
+        return res.json({ isValid: false, message: "API ключ не настроен" });
       }
       
       if (!subdomain) {
-        return res.json({ isValid: false, message: "Поддомен не предоставлен" });
+        return res.json({ isValid: false, message: "Поддомен не настроен" });
       }
       
-      console.log("AmoCRM test-connection final:", { subdomain, apiKeyLength: apiKey.length });
+      console.log("AmoCRM test-connection (from DB):", { subdomain, apiKeyLength: apiKey.length });
       
       // Проверяем подключение
       const testResult = await amoCrmService.testConnection(subdomain, apiKey);
       
-      // Обновляем статус подключения в настройках только если они уже существуют
-      const existingSettings = await storage.getAmoCrmSettings(userId);
-      if (existingSettings) {
-        await storage.updateAmoCrmSettings(userId, { isActive: testResult });
-      }
+      // Обновляем статус подключения
+      await storage.updateAmoCrmSettings(userId, { isActive: testResult });
       
       if (testResult) {
         res.json({ isValid: true });
