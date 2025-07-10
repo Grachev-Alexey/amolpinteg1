@@ -25,7 +25,6 @@ export default function RuleConstructor({
 }: RuleConstructorProps) {
   const [rule, setRule] = useState(initialRule || {
     name: "",
-    description: "",
     webhookSource: "",
     conditions: { operator: "AND", rules: [] },
     actions: { list: [] },
@@ -61,12 +60,8 @@ export default function RuleConstructor({
   const conditionTypes = getConditionTypes();
 
   const actionTypes = [
-    { value: "create_amocrm_lead", label: "Создать сделку в AmoCRM" },
-    { value: "update_amocrm_lead", label: "Обновить сделку в AmoCRM" },
-    { value: "create_amocrm_contact", label: "Создать контакт в AmoCRM" },
-    { value: "send_to_lptracker", label: "Отправить в LPTracker" },
-    { value: "update_lptracker_lead", label: "Обновить лид в LPTracker" },
-    { value: "create_task", label: "Создать задачу" },
+    { value: "sync_to_amocrm", label: "Синхронизировать с AmoCRM" },
+    { value: "sync_to_lptracker", label: "Синхронизировать с LPTracker" },
   ];
 
   // Load AmoCRM metadata
@@ -206,7 +201,9 @@ export default function RuleConstructor({
     const newAction = {
       id: Date.now().toString(),
       type: "",
-      data: {}
+      searchBy: "phone", // default search field
+      fields: {}, // fields to sync
+      createIfNotFound: true
     };
     setRule({
       ...rule,
@@ -273,16 +270,7 @@ export default function RuleConstructor({
               placeholder="Например: Обработка горячих лидов"
             />
           </div>
-          <div>
-            <Label htmlFor="ruleDescription">Описание</Label>
-            <Textarea
-              id="ruleDescription"
-              value={rule.description}
-              onChange={(e) => setRule({ ...rule, description: e.target.value })}
-              placeholder="Опишите что делает это правило..."
-              rows={2}
-            />
-          </div>
+
           <div>
             <Label htmlFor="webhookSource">Источник webhook</Label>
             <Select
@@ -469,36 +457,85 @@ export default function RuleConstructor({
               <p>Нет действий. Добавьте первое действие.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {rule.actions.list.map((action: any, index: number) => (
-                <div key={action.id} className="flex items-center space-x-2 p-3 bg-card rounded-lg border">
-                  <span className="text-sm font-medium text-muted-foreground min-w-[2rem]">
-                    {index + 1}.
-                  </span>
-                  <Select
-                    value={action.type}
-                    onValueChange={(value) => updateAction(action.id, "type", value)}
-                  >
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Тип действия" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {actionTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div key={action.id} className="p-4 bg-card rounded-lg border space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Действие {index + 1}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeAction(action.id)}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                   
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeAction(action.id)}
-                    className="text-destructive hover:text-destructive/80"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Тип действия</Label>
+                      <Select
+                        value={action.type}
+                        onValueChange={(value) => updateAction(action.id, "type", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите действие" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {actionTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {action.type && (
+                      <div>
+                        <Label className="text-sm font-medium">Поиск по полю</Label>
+                        <Select
+                          value={action.searchBy}
+                          onValueChange={(value) => updateAction(action.id, "searchBy", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите поле" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="phone">Телефон</SelectItem>
+                            <SelectItem value="email">Email</SelectItem>
+                            <SelectItem value="name">Имя</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {action.type && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Настройки синхронизации полей</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Источник данных</Label>
+                          <div className="text-sm">Webhook {rule.webhookSource}</div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Назначение</Label>
+                          <div className="text-sm">
+                            {action.type === 'sync_to_amocrm' ? 'AmoCRM' : 'LPTracker'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="text-sm text-muted-foreground">
+                          💡 Система автоматически найдет существующий контакт/лид по выбранному полю или создаст новый
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
