@@ -9,35 +9,6 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (January 2025)
-
-### Field Mapping System Complete Redesign
-- **Date**: January 10, 2025
-- **Changes**: 
-  - Completely rebuilt field mapping interface from scratch
-  - Removed all temporary field logic and confusing UI elements
-  - Created new FieldMappingEditor component with modern design
-  - Added visual indicators for field types and usage status
-  - Implemented proper field validation and duplicate prevention
-  - Added mapping statistics and completion tracking
-- **Impact**: 
-  - Dramatically improved user experience for field mapping
-  - Clean, intuitive interface with clear visual hierarchy
-  - Better data integrity and validation
-  - No more confusing temporary fields or empty rows
-
-### Rule Builder Interface Improvements
-- **Date**: January 10, 2025
-- **Changes**:
-  - Hidden rule list during rule creation/editing for focused workflow
-  - Added statistics dashboard showing rule counts (total, active, inactive)
-  - Improved visual design with color-coded status indicators
-  - Better separation between creation and management interfaces
-- **Impact**:
-  - Cleaner, more focused rule creation experience
-  - Better overview of rule statistics
-  - Reduced cognitive load during rule creation
-
 
 ## System Architecture
 
