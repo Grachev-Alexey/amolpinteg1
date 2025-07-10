@@ -165,15 +165,17 @@ export default function Settings() {
     }));
   };
 
-  // Set form data when settings are loaded
+  // Set form data when settings are loaded initially only
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   React.useEffect(() => {
-    if (amoCrmSettings) {
+    if (amoCrmSettings && !initialLoadDone) {
       setAmoCrmData({
         subdomain: amoCrmSettings.subdomain || "",
         apiKey: amoCrmSettings.apiKey || "",
       });
+      setInitialLoadDone(true);
     }
-  }, [amoCrmSettings]);
+  }, [amoCrmSettings, initialLoadDone]);
 
   if (amoCrmLoading) {
     return (
