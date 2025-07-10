@@ -353,10 +353,9 @@ export default function RuleConstructor({
           a.id === actionId ? { 
             ...a, 
             fieldMappings: mappings.reduce((acc, mapping) => {
-              // Сохраняем все маппинги, даже неполные, для корректного состояния
-              if (mapping.sourceField || mapping.targetField) {
-                acc[mapping.sourceField || `temp_${mapping.id}`] = mapping.targetField;
-              }
+              // Сохраняем все маппинги, включая пустые для отображения
+              const key = mapping.sourceField || `temp_${mapping.id}`;
+              acc[key] = mapping.targetField || '';
               return acc;
             }, {} as any)
           } : a
@@ -665,11 +664,13 @@ export default function RuleConstructor({
                         mappings={(() => {
                           // Преобразуем старый формат fieldMappings в новый формат массива
                           const fieldMappings = action.fieldMappings || {};
-                          return Object.entries(fieldMappings).map(([sourceField, targetField], index) => ({
-                            id: `mapping_${index}_${sourceField}`,
+                          const result = Object.entries(fieldMappings).map(([sourceField, targetField], index) => ({
+                            id: sourceField.startsWith('temp_') ? sourceField.replace('temp_', '') : `mapping_${index}_${sourceField}`,
                             sourceField: sourceField.startsWith('temp_') ? '' : sourceField,
                             targetField: targetField as string
                           }));
+                          console.log('Converted mappings for display:', result);
+                          return result;
                         })()}
                         sourceFields={getSourceFields()}
                         targetFields={getTargetFields(action.type)}
