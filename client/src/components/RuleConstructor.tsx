@@ -515,24 +515,86 @@ export default function RuleConstructor({
                   </div>
                   
                   {action.type && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <Label className="text-sm font-medium">Настройки синхронизации полей</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Источник данных</Label>
-                          <div className="text-sm">Webhook {rule.webhookSource}</div>
+                          <div className="text-sm bg-muted p-2 rounded">Webhook {rule.webhookSource}</div>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Назначение</Label>
-                          <div className="text-sm">
+                          <div className="text-sm bg-muted p-2 rounded">
                             {action.type === 'sync_to_amocrm' ? 'AmoCRM' : 'LPTracker'}
                           </div>
                         </div>
                       </div>
-                      <div className="pt-2 border-t">
-                        <div className="text-sm text-muted-foreground">
-                          💡 Система автоматически найдет существующий контакт/лид по выбранному полю или создаст новый
+
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Маппинг полей</Label>
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-3 gap-2 text-xs font-medium text-muted-foreground">
+                            <div>Поле источника</div>
+                            <div>→</div>
+                            <div>Поле назначения</div>
+                          </div>
+                          
+                          {/* Основные поля */}
+                          <div className="grid grid-cols-3 gap-2 items-center py-1">
+                            <div className="text-sm">name</div>
+                            <div className="text-center">→</div>
+                            <div className="text-sm">{action.type === 'sync_to_amocrm' ? 'Имя контакта' : 'Имя лида'}</div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-2 items-center py-1">
+                            <div className="text-sm">phone</div>
+                            <div className="text-center">→</div>
+                            <div className="text-sm">Телефон</div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-2 items-center py-1">
+                            <div className="text-sm">email</div>
+                            <div className="text-center">→</div>
+                            <div className="text-sm">Email</div>
+                          </div>
+
+                          {action.type === 'sync_to_amocrm' && (
+                            <div className="grid grid-cols-3 gap-2 items-center py-1">
+                              <div className="text-sm">deal_name</div>
+                              <div className="text-center">→</div>
+                              <div className="text-sm">Название сделки</div>
+                            </div>
+                          )}
+
+                          {action.type === 'sync_to_amocrm' && (
+                            <div className="grid grid-cols-3 gap-2 items-center py-1">
+                              <div className="text-sm">price</div>
+                              <div className="text-center">→</div>
+                              <div className="text-sm">Бюджет сделки</div>
+                            </div>
+                          )}
                         </div>
+                      </div>
+
+                      <div className="pt-3 border-t space-y-2">
+                        <div className="text-sm text-muted-foreground">
+                          <strong>Логика работы:</strong>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          1. Система ищет существующий контакт по выбранному полю ({action.searchBy})
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          2. Если контакт найден - обновляет данные
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          3. Если не найден - создает новый контакт
+                        </div>
+                        {action.type === 'sync_to_amocrm' && (
+                          <div className="text-sm text-muted-foreground">
+                            4. Для AmoCRM дополнительно создает или обновляет связанную сделку
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
