@@ -80,7 +80,7 @@ export default function Settings() {
   // Mutations
   const saveAmoCrmMutation = useMutation({
     mutationFn: async (data: any) => {
-      await apiRequest("POST", "/api/amocrm/settings", data);
+      await apiRequest("/api/amocrm/settings", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -104,7 +104,7 @@ export default function Settings() {
 
   const saveLpTrackerMutation = useMutation({
     mutationFn: async (data: any) => {
-      await apiRequest("POST", "/api/lptracker/settings", data);
+      await apiRequest("/api/lptracker/settings", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -128,7 +128,7 @@ export default function Settings() {
 
   const saveLpTrackerGlobalMutation = useMutation({
     mutationFn: async (data: any) => {
-      await apiRequest("POST", "/api/lptracker/global-settings", data);
+      await apiRequest("/api/lptracker/global-settings", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -158,8 +158,8 @@ export default function Settings() {
   const testConnectionMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest(
-        "POST",
         "/api/amocrm/test-connection",
+        "POST",
         data,
       );
       return response.json();
@@ -196,7 +196,7 @@ export default function Settings() {
 
   const refreshMetadataMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/amocrm/refresh-metadata");
+      await apiRequest("/api/amocrm/refresh-metadata", "POST");
     },
     onSuccess: () => {
       toast({

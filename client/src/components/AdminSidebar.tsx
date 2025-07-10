@@ -18,7 +18,7 @@ export default function AdminSidebar() {
   const queryClient = useQueryClient();
 
   const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/logout"),
+    mutationFn: () => apiRequest("/api/logout", "POST"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       window.location.href = "/auth";

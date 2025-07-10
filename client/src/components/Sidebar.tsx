@@ -28,7 +28,7 @@ export default function Sidebar() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      await apiRequest("/api/logout", "POST");
     },
     onSuccess: () => {
       window.location.href = "/";

@@ -30,7 +30,7 @@ export default function UserManagement() {
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      return apiRequest("POST", "/api/admin/users", userData);
+      return apiRequest("/api/admin/users", "POST", userData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -51,7 +51,7 @@ export default function UserManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, ...userData }: any) => {
-      return apiRequest("PATCH", `/api/admin/users/${id}`, userData);
+      return apiRequest(`/api/admin/users/${id}`, "PATCH", userData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -72,7 +72,7 @@ export default function UserManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/admin/users/${id}`);
+      return apiRequest(`/api/admin/users/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -92,7 +92,7 @@ export default function UserManagement() {
 
   const updateLpTrackerMutation = useMutation({
     mutationFn: async ({ userId, projectId }: any) => {
-      return apiRequest("POST", `/api/admin/users/${userId}/lptracker`, { projectId });
+      return apiRequest(`/api/admin/users/${userId}/lptracker`, "POST", { projectId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/lptracker-user-settings"] });

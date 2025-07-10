@@ -27,7 +27,7 @@ export default function RuleBuilder() {
   // Create rule mutation
   const createRuleMutation = useMutation({
     mutationFn: async (rule: any) => {
-      await apiRequest('POST', '/api/sync-rules', rule);
+      await apiRequest('/api/sync-rules', 'POST', rule);
     },
     onSuccess: () => {
       toast({
@@ -53,7 +53,7 @@ export default function RuleBuilder() {
   // Update rule mutation
   const updateRuleMutation = useMutation({
     mutationFn: async ({ id, rule }: { id: number; rule: any }) => {
-      await apiRequest('PUT', `/api/sync-rules/${id}`, rule);
+      await apiRequest(`/api/sync-rules/${id}`, 'PUT', rule);
     },
     onSuccess: () => {
       toast({
@@ -79,7 +79,7 @@ export default function RuleBuilder() {
   // Delete rule mutation
   const deleteRuleMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/sync-rules/${id}`);
+      await apiRequest(`/api/sync-rules/${id}`, 'DELETE');
     },
     onSuccess: () => {
       toast({

@@ -49,7 +49,7 @@ export default function CallResults() {
   // Add call result mutation
   const addCallResultMutation = useMutation({
     mutationFn: async (result: any) => {
-      await apiRequest('POST', '/api/call-results', {
+      await apiRequest('/api/call-results', 'POST', {
         ...result,
         callDate: new Date(result.callDate).toISOString(),
       });
