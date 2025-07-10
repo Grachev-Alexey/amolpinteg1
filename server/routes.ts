@@ -116,18 +116,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId;
       let { subdomain, apiKey } = req.body;
       
-      // Если API ключ пустой, пытаемся использовать сохраненный
-      if (!apiKey) {
+      // Если данные пустые, пытаемся использовать сохраненные
+      if (!apiKey || !subdomain) {
         const settings = await storage.getAmoCrmSettings(userId);
-        if (settings && settings.apiKey) {
-          apiKey = settings.apiKey;
-          subdomain = settings.subdomain;
+        if (settings) {
+          apiKey = apiKey || settings.apiKey;
+          subdomain = subdomain || settings.subdomain;
         }
       }
       
       if (!apiKey) {
         return res.json({ isValid: false, message: "API ключ не предоставлен" });
       }
+      
+      if (!subdomain) {
+        return res.json({ isValid: false, message: "Поддомен не предоставлен" });
+      }
+      
+      console.log("AmoCRM test-connection:", { subdomain, apiKeyLength: apiKey.length });
       
       // Проверяем подключение
       const testResult = await amoCrmService.testConnection(subdomain, apiKey);
