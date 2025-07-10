@@ -377,7 +377,8 @@ export default function RuleConstructor({
   };
 
   const addActionFieldMapping = (actionId: string) => {
-    const newKey = `new_mapping_${Date.now()}`;
+    // Создаем уникальный временный ключ для нового маппинга
+    const tempKey = `temp_${Date.now()}`;
     setRule({
       ...rule,
       actions: {
@@ -387,7 +388,7 @@ export default function RuleConstructor({
             ...a, 
             fieldMappings: {
               ...a.fieldMappings,
-              [newKey]: '' // Уникальный ключ для нового маппинга
+              [tempKey]: '' // Временный ключ для нового маппинга
             }
           } : a
         )
@@ -407,7 +408,7 @@ export default function RuleConstructor({
             fieldMappings: action.fieldMappings ? 
               Object.fromEntries(
                 Object.entries(action.fieldMappings).filter(([key, value]) => 
-                  key && value && !key.startsWith('new_mapping_')
+                  key && value && !key.startsWith('temp_')
                 )
               ) : {}
           }))
@@ -730,79 +731,82 @@ export default function RuleConstructor({
                           
                           {/* Динамический маппинг полей */}
                           {(() => {
-                            // Получаем все маппинги и сортируем их
+                            // Получаем все маппинги
                             const mappings = action.fieldMappings ? Object.entries(action.fieldMappings) : [];
                             
-                            // Сортируем маппинги: сначала настроенные (с реальными полями), потом новые
-                            const sortedMappings = mappings.sort(([keyA, valueA], [keyB, valueB]) => {
-                              const isNewA = keyA.startsWith('new_mapping_');
-                              const isNewB = keyB.startsWith('new_mapping_');
-                              
-                              if (isNewA && !isNewB) return 1; // Новые в конец
-                              if (!isNewA && isNewB) return -1; // Настроенные в начало
-                              return 0;
-                            });
+                            // Разделяем на временные и постоянные маппинги
+                            const tempMappings = mappings.filter(([key]) => key.startsWith('temp_'));
+                            const validMappings = mappings.filter(([key, value]) => key && key !== '' && !key.startsWith('temp_'));
                             
-                            return sortedMappings.length > 0 ? (
-                              sortedMappings.map(([sourceField, targetField], index) => (
-                                <div key={`${action.id}-${sourceField}-${index}`} className="grid grid-cols-4 gap-2 items-center py-1">
-                                  <div>
-                                    <Select
-                                      value={sourceField.startsWith('new_mapping_') ? '' : sourceField}
-                                      onValueChange={(value) => {
-                                        if (value) {
-                                          // Удаляем старое маппинг и добавляем новое
-                                          removeActionFieldMapping(action.id, sourceField);
-                                          updateActionFieldMapping(action.id, value, targetField as string);
-                                        }
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-8">
-                                        <SelectValue placeholder="Выберите поле источника" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {getSourceFields().map((field) => (
-                                          <SelectItem key={field.id} value={field.id}>
-                                            {field.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                            // Сортируем валидные маппинги по алфавиту
+                            const sortedMappings = validMappings.sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
+                            
+                            // Объединяем все маппинги: сначала валидные, потом временные
+                            const allMappings = [...sortedMappings, ...tempMappings];
+                            
+                            return allMappings.length > 0 ? (
+                              allMappings.map(([sourceField, targetField], index) => {
+                                const isTemp = sourceField.startsWith('temp_');
+                                return (
+                                  <div key={`${action.id}-${sourceField}-${index}`} className="grid grid-cols-4 gap-2 items-center py-1">
+                                    <div>
+                                      <Select
+                                        value={isTemp ? '' : sourceField}
+                                        onValueChange={(value) => {
+                                          if (value) {
+                                            // Удаляем старое маппинг и добавляем новое
+                                            removeActionFieldMapping(action.id, sourceField);
+                                            updateActionFieldMapping(action.id, value, targetField as string);
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8">
+                                          <SelectValue placeholder="Выберите поле источника" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getSourceFields().map((field) => (
+                                            <SelectItem key={field.id} value={field.id}>
+                                              {field.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    
+                                    <div className="text-center text-muted-foreground">→</div>
+                                    
+                                    <div>
+                                      <Select
+                                        value={targetField as string}
+                                        onValueChange={(value) => updateActionFieldMapping(action.id, sourceField, value)}
+                                      >
+                                        <SelectTrigger className="h-8">
+                                          <SelectValue placeholder="Выберите поле назначения" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getTargetFields(action.type).map((field) => (
+                                            <SelectItem key={field.id} value={field.id}>
+                                              {field.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    
+                                    <div>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeActionFieldMapping(action.id, sourceField)}
+                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </Button>
+                                    </div>
                                   </div>
-                                  
-                                  <div className="text-center text-muted-foreground">→</div>
-                                  
-                                  <div>
-                                    <Select
-                                      value={targetField as string}
-                                      onValueChange={(value) => updateActionFieldMapping(action.id, sourceField, value)}
-                                    >
-                                      <SelectTrigger className="h-8">
-                                        <SelectValue placeholder="Выберите поле назначения" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {getTargetFields(action.type).map((field) => (
-                                          <SelectItem key={field.id} value={field.id}>
-                                            {field.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  
-                                  <div>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => removeActionFieldMapping(action.id, sourceField)}
-                                      className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))
+                                );
+                              })
                             ) : (
                               <div className="text-center py-4 text-muted-foreground">
                                 <p className="text-sm">Нет настроенных полей для синхронизации</p>

@@ -296,6 +296,18 @@ export class AmoCrmService {
         });
       }
 
+      // Добавляем кастомные поля из маппинга
+      if (webhookData.custom_fields_values) {
+        for (const [fieldId, value] of Object.entries(webhookData.custom_fields_values)) {
+          if (value && fieldId) {
+            contactData.custom_fields_values.push({
+              field_id: parseInt(fieldId),
+              values: [{ value }]
+            });
+          }
+        }
+      }
+
       const createResponse = await fetch(`${baseUrl}/contacts`, {
         method: 'POST',
         headers: {
@@ -366,7 +378,20 @@ export class AmoCrmService {
         name: webhookData.deal_name || webhookData.name || 'Новая сделка',
         price: webhookData.price || 0,
         contacts: [{ id: contactId }],
+        custom_fields_values: []
       };
+
+      // Добавляем кастомные поля сделки из маппинга
+      if (webhookData.deal_custom_fields) {
+        for (const [fieldId, value] of Object.entries(webhookData.deal_custom_fields)) {
+          if (value && fieldId) {
+            dealData.custom_fields_values.push({
+              field_id: parseInt(fieldId),
+              values: [{ value }]
+            });
+          }
+        }
+      }
 
       const createResponse = await fetch(`${baseUrl}/leads`, {
         method: 'POST',

@@ -131,6 +131,11 @@ export class LpTrackerService {
         leadData.custom = webhookData.custom_fields;
       }
 
+      // Добавляем кастомные поля из маппинга
+      if (webhookData.lptracker_custom_fields) {
+        leadData.custom = { ...leadData.custom, ...webhookData.lptracker_custom_fields };
+      }
+
       const createResponse = await fetch(`${baseUrl}/lead`, {
         method: 'POST',
         headers: {
