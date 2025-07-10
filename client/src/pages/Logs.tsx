@@ -24,9 +24,9 @@ export default function Logs() {
   const [filterLevel, setFilterLevel] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");
 
-  // Fetch logs
+  // Fetch logs - use admin logs for superuser, user logs for regular users
   const { data: logs = [], isLoading: logsLoading, refetch } = useQuery({
-    queryKey: ['/api/logs'],
+    queryKey: ['/api/admin/logs'],
     retry: false,
     refetchInterval: 10000, // Auto-refresh every 10 seconds
   });

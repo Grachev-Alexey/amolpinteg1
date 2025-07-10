@@ -63,15 +63,10 @@ export default function WebhookManager() {
   });
 
   const handleSetupWebhook = () => {
-    if (!webhookUrl.trim()) {
-      toast({
-        title: "Ошибка",
-        description: "Введите URL вебхука",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // Автоматически определяем URL вебхука
+    const currentDomain = window.location.origin;
+    const webhookUrl = `${currentDomain}/api/webhooks/lptracker`;
+    
     setupWebhookMutation.mutate(webhookUrl);
   };
 
@@ -151,13 +146,11 @@ export default function WebhookManager() {
         {!webhookStatus?.active && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="webhook-url">URL вебхука</Label>
-              <Input
-                id="webhook-url"
-                placeholder="https://your-domain.com/api/webhooks/lptracker"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-              />
+              <Label>URL вебхука</Label>
+              <div className="p-3 bg-muted rounded-md text-sm text-muted-foreground">
+                {`${window.location.origin}/api/webhooks/lptracker`}
+                <div className="text-xs mt-1">URL автоматически определяется системой</div>
+              </div>
             </div>
             <Button
               onClick={handleSetupWebhook}

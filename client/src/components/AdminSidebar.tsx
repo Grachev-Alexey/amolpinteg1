@@ -28,7 +28,7 @@ export default function AdminSidebar() {
   const menuItems = [
     {
       icon: LayoutDashboard,
-      label: "Главная",
+      label: "Обзор",
       href: "/admin",
       active: location === "/admin",
     },
@@ -55,12 +55,6 @@ export default function AdminSidebar() {
       label: "Логи",
       href: "/admin/logs",
       active: location === "/admin/logs",
-    },
-    {
-      icon: Activity,
-      label: "Мониторинг",
-      href: "/admin/monitoring",
-      active: location === "/admin/monitoring",
     },
   ];
 
