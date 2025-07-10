@@ -134,10 +134,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Обновляем статус подключения в настройках
       if (testResult) {
-        await storage.updateAmoCrmSettings(userId, { isConnected: true });
+        await storage.updateAmoCrmSettings(userId, { isActive: true });
         res.json({ isValid: true });
       } else {
-        await storage.updateAmoCrmSettings(userId, { isConnected: false });
+        await storage.updateAmoCrmSettings(userId, { isActive: false });
         res.json({ 
           isValid: false, 
           message: "API ключ недействителен или истек. Проверьте правильность данных." 

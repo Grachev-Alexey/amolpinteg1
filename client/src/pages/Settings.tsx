@@ -273,7 +273,7 @@ export default function Settings() {
           {amoCrmSettings && (
             <div className="pt-4 border-t">
               <div className="flex items-center gap-2">
-                {amoCrmSettings.isConnected ? (
+                {amoCrmSettings.isActive ? (
                   <>
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <Badge variant="default">Подключено</Badge>

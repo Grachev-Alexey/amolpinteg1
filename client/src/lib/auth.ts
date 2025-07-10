@@ -36,3 +36,18 @@ export function useAuthRedirect() {
 
   return { isAuthenticated, isLoading };
 }
+
+export function isUnauthorizedError(error: any): boolean {
+  return error?.status === 401 || error?.response?.status === 401;
+}
+
+export function handleUnauthorizedError(error: any, toast: any) {
+  toast({
+    title: "Сессия истекла",
+    description: "Выполняется перенаправление на страницу входа...",
+    variant: "destructive",
+  });
+  setTimeout(() => {
+    window.location.href = "/auth";
+  }, 500);
+}

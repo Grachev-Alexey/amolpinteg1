@@ -195,25 +195,6 @@
   .dark .dropdown-item:hover {
     @apply bg-accent text-accent-foreground;
   }
-    @apply text-foreground;
-  }
-
-  /* Fix input visibility */
-  .dark input[type="text"],
-  .dark input[type="email"],
-  .dark input[type="password"],
-  .dark textarea,
-  .dark select {
-    @apply bg-input border-border text-foreground;
-  }
-
-  .dark input[type="text"]:focus,
-  .dark input[type="email"]:focus,
-  .dark input[type="password"]:focus,
-  .dark textarea:focus,
-  .dark select:focus {
-    @apply ring-ring border-ring;
-  }
 
   /* Fix card backgrounds */
   .dark .bg-gray-50 {
