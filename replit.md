@@ -6,6 +6,14 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 ## Recent Changes
 
+**July 10, 2025 - LPTracker Architecture & Database Fix**
+- ✓ Fixed critical bug in saveLpTrackerGlobalSettings function - now properly updates existing settings instead of creating duplicates
+- ✓ Added token field to lpTrackerGlobalSettings database schema for proper authentication token storage
+- ✓ Updated LPTracker service to use cached tokens and only refresh when needed
+- ✓ Applied database migration to add token field to existing database
+- ✓ Improved error handling and logging for LPTracker authentication
+- ✓ Fixed authentication token caching mechanism to reduce API calls
+
 **July 10, 2025 - Migration to Replit Environment Complete**
 - ✓ Successfully migrated from Replit Agent to standard Replit environment
 - ✓ Installed missing dependencies (tsx, drizzle-kit) 

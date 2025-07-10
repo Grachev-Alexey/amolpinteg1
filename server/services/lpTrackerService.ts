@@ -205,6 +205,11 @@ export class LpTrackerService {
   }
 
   private async getAuthToken(globalSettings: any): Promise<string> {
+    // Check if we have a cached token
+    if (globalSettings.token) {
+      return globalSettings.token;
+    }
+    
     const baseUrl = `https://${globalSettings.address}`;
     
     const response = await fetch(`${baseUrl}/login`, {
@@ -228,6 +233,11 @@ export class LpTrackerService {
     if (result.status !== 'success' || !result.result?.token) {
       throw new Error('LPTracker auth failed: no token received');
     }
+
+    // Save the token for future use
+    await this.storage.updateLpTrackerGlobalSettings({
+      token: result.result.token
+    });
 
     return result.result.token;
   }

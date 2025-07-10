@@ -208,11 +208,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveLpTrackerGlobalSettings(settings: InsertLpTrackerGlobalSettings): Promise<LpTrackerGlobalSettings> {
-    const [savedSettings] = await db
-      .insert(lpTrackerGlobalSettings)
-      .values(settings)
-      .returning();
-    return savedSettings;
+    // Check if settings already exist
+    const existingSettings = await this.getLpTrackerGlobalSettings();
+    
+    if (existingSettings) {
+      // Update existing settings
+      const [updatedSettings] = await db
+        .update(lpTrackerGlobalSettings)
+        .set({
+          ...settings,
+          updatedAt: new Date(),
+        })
+        .where(eq(lpTrackerGlobalSettings.id, existingSettings.id))
+        .returning();
+      return updatedSettings;
+    } else {
+      // Insert new settings
+      const [savedSettings] = await db
+        .insert(lpTrackerGlobalSettings)
+        .values({
+          ...settings,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+      return savedSettings;
+    }
   }
 
   async updateLpTrackerGlobalSettings(settings: Partial<InsertLpTrackerGlobalSettings>): Promise<LpTrackerGlobalSettings | undefined> {

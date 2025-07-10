@@ -55,6 +55,7 @@ export const lpTrackerGlobalSettings = pgTable("lptracker_global_settings", {
   password: text("password").notNull(), // Password for LPTracker
   service: varchar("service").default("CRM Integration").notNull(), // Service name for logging
   address: varchar("address").default("direct.lptracker.ru").notNull(), // API server address
+  token: text("token"), // Authentication token from LPTracker
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
