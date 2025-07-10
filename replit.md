@@ -112,3 +112,11 @@ The application follows a full-stack architecture with clear separation between 
 - **Russian Localization**: Complete Russian language interface
 - **Unified Sync Logic**: Automatic find-or-create logic for contacts and leads
 - **API Integration**: Full AmoCRM v4 and LPTracker API implementation
+
+## Recent Changes (January 2025)
+- **Schema Migration**: Removed unused `description` field from sync_rules table, added `webhookSource` field
+- **Enhanced Validation**: Updated insertSyncRuleSchema with proper structure for conditions and actions
+- **Webhook Source Support**: Added proper filtering of rules based on webhook source (AmoCRM/LPTracker)
+- **Frontend Updates**: Added webhookSource selector in RuleConstructor and column in rules table
+- **Backend Fixes**: Updated WebhookService to filter rules by source before processing
+- **Database Updates**: Applied schema changes and set default webhook source for existing rules

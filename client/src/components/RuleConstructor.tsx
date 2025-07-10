@@ -40,7 +40,7 @@ export default function RuleConstructor({
     }
     return {
       name: "",
-      webhookSource: "",
+      webhookSource: "amocrm",
       conditions: { operator: "AND", rules: [] },
       actions: { list: [] },
       isActive: true

@@ -102,7 +102,7 @@ export const syncRules = pgTable("sync_rules", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
-  description: text("description"),
+  webhookSource: varchar("webhook_source").notNull(), // 'amocrm' or 'lptracker'
   conditions: jsonb("conditions").notNull(),
   actions: jsonb("actions").notNull(),
   isActive: boolean("is_active").default(true),
@@ -212,6 +212,27 @@ export const insertSyncRuleSchema = createInsertSchema(syncRules).omit({
   createdAt: true,
   updatedAt: true,
   executionCount: true,
+}).extend({
+  webhookSource: z.enum(['amocrm', 'lptracker']),
+  conditions: z.object({
+    operator: z.enum(['AND', 'OR']),
+    rules: z.array(z.object({
+      id: z.string(),
+      type: z.string(),
+      field: z.string().optional(),
+      operator: z.string().optional(),
+      value: z.any().optional()
+    }))
+  }),
+  actions: z.object({
+    list: z.array(z.object({
+      id: z.string(),
+      type: z.enum(['sync_to_amocrm', 'sync_to_lptracker']),
+      searchBy: z.string().default('phone'),
+      fieldMappings: z.record(z.string()).optional(),
+      createIfNotFound: z.boolean().default(true)
+    }))
+  })
 });
 
 export const insertFileUploadSchema = createInsertSchema(fileUploads).omit({

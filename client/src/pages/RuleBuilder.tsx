@@ -148,6 +148,19 @@ export default function RuleBuilder() {
       )
     },
     {
+      key: "webhookSource",
+      label: "Источник",
+      render: (value: string) => (
+        <div className="text-sm">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            value === 'amocrm' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+          }`}>
+            {value === 'amocrm' ? 'AmoCRM' : 'LPTracker'}
+          </span>
+        </div>
+      )
+    },
+    {
       key: "conditions",
       label: "Условия",
       render: (value: any) => (

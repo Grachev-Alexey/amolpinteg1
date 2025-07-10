@@ -246,9 +246,10 @@ export class WebhookService {
   // Главный метод обработки правил для сделки
   private async processLeadRules(userId: string, leadId: string, leadDetails: any, contactsDetails: any[], originalPayload: any): Promise<void> {
     try {
-      // Получаем правила пользователя
+      // Получаем правила пользователя только для AmoCRM
       const rules = await this.storage.getSyncRules(userId);
-      const activeRules = rules.filter(rule => rule.isActive);
+      const amoCrmRules = rules.filter(rule => rule.webhookSource === 'amocrm');
+      const activeRules = amoCrmRules.filter(rule => rule.isActive);
 
       await this.logService.log(userId, 'info', `AmoCRM - Проверяем ${activeRules.length} активных правил для сделки ${leadId}`, { 
         leadId, 
@@ -383,7 +384,8 @@ export class WebhookService {
       const userId = payload.user_id;
 
       const rules = await this.storage.getSyncRules(userId);
-      const applicableRules = rules.filter(rule => 
+      const lpTrackerRules = rules.filter(rule => rule.webhookSource === 'lptracker');
+      const applicableRules = lpTrackerRules.filter(rule => 
         rule.isActive && 
         this.checkConditions(rule.conditions, { type: 'lptracker_lead_status_updated', leadId, newStatus })
       );
