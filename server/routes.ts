@@ -673,6 +673,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin/integration-status', requireSuperuser, async (req: any, res) => {
     try {
+      // Disable caching for this endpoint
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       const allUsers = await db.select().from(users);
       let amoCrmActive = 0;
       let lpTrackerActive = 0;
@@ -1175,6 +1180,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get global LPTracker webhook status
   app.get('/api/lptracker/webhook-status', requireSuperuser, async (req: any, res) => {
     try {
+      // Disable caching for this endpoint
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       const result = await lpTrackerService.getWebhookStatus();
       res.json(result);
     } catch (error) {
@@ -1186,6 +1196,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get detailed webhook status for admin
   app.get('/api/admin/webhook-status', requireSuperuser, async (req: any, res) => {
     try {
+      // Disable caching for this endpoint
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
+      console.log('[DEBUG] Fetching webhook status for all users');
       const allUsers = await db.select().from(users);
       const webhookStatuses = [];
 
@@ -1220,6 +1236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      console.log('[DEBUG] Returning webhook statuses:', webhookStatuses);
       res.json({ webhooks: webhookStatuses });
     } catch (error) {
       console.error("Error fetching webhook status:", error);
