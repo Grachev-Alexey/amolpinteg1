@@ -178,6 +178,8 @@ export class WebhookService {
       // Обрабатываем вебхук через правила без привязки к типу события
       for (const rule of syncRules) {
         try {
+          // Удалено - отладочная информация больше не нужна
+
           // Проверяем условия правила
           if (this.checkConditions(rule.conditions, webhookData)) {
             await this.logService.log(userId, 'info', `LPTracker - Правило "${rule.name}" применимо`, { 
@@ -495,8 +497,11 @@ export class WebhookService {
             return String(pipelineId) === String(condition.value);
           
           case 'status':
-            // Проверяем ID статуса из данных сделки
-            const statusId = eventData.leadDetails?.status_id || eventData.webhookPayload?.['leads[add][0][status_id]'];
+            // Проверяем ID статуса из данных сделки (AmoCRM) или LPTracker
+            const statusId = eventData.leadDetails?.status_id || 
+                           eventData.webhookPayload?.['leads[add][0][status_id]'] ||
+                           eventData.stage_id || 
+                           eventData.stage?.id;
             return String(statusId) === String(condition.value);
           
           case 'field_equals':
@@ -715,16 +720,27 @@ export class WebhookService {
       // ВАЖНО: Если fieldPath это просто число или строка-число, то это ID кастомного поля
       if (/^\d+$/.test(fieldPath)) {
         const fieldId = fieldPath;
-        // Сначала ищем в сделке
+        
+        // Проверяем структуру данных LPTracker
+        if (eventData.contact?.fields) {
+          const lpTrackerField = eventData.contact.fields.find((f: any) => f.id == fieldId);
+          if (lpTrackerField) {
+            return lpTrackerField.value || '';
+          }
+        }
+        
+        // Проверяем структуру данных AmoCRM (leadDetails)
         const leadCustomField = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
         if (leadCustomField) {
           return leadCustomField.values?.[0]?.value || '';
         }
-        // Потом в контакте
+        
+        // Проверяем структуру данных AmoCRM (contactsDetails)
         const contactCustomField = eventData.contactsDetails?.[0]?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
         if (contactCustomField) {
           return contactCustomField.values?.[0]?.value || '';
         }
+        
         return '';
       }
 
