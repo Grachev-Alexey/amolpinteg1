@@ -155,82 +155,6 @@ export default function UserManagement() {
     return lpTrackerSettings?.find((setting: any) => setting.userId === userId);
   };
 
-  const userColumns = [
-    {
-      key: 'username',
-      label: 'Имя пользователя',
-      sortable: true,
-      render: (value: string, row: any) => (
-        <div className="flex items-center gap-2">
-          {row.role === "superuser" ? (
-            <Shield className="h-4 w-4 text-primary" />
-          ) : (
-            <User className="h-4 w-4 text-muted-foreground" />
-          )}
-          <div>
-            <div className="font-medium text-foreground">{value}</div>
-            <div className="text-xs text-muted-foreground">
-              {row.firstName} {row.lastName}
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'email',
-      label: 'Email',
-      sortable: true,
-      render: (value: string) => (
-        <span className="text-foreground">{value || "—"}</span>
-      ),
-    },
-    {
-      key: 'role',
-      label: 'Роль',
-      render: (value: string) => (
-        <Badge variant={value === 'superuser' ? 'default' : 'secondary'}>
-          {value === 'superuser' ? 'Администратор' : 'Пользователь'}
-        </Badge>
-      ),
-    },
-    {
-      key: 'createdAt',
-      label: 'Дата регистрации',
-      sortable: true,
-      render: (value: string) => (
-        <span className="text-foreground">
-          {new Date(value).toLocaleDateString("ru-RU")}
-        </span>
-      ),
-    },
-    {
-      key: 'actions',
-      label: 'Действия',
-      render: (value: any, row: any) => (
-        <div className="flex items-center space-x-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setEditingUser(row)}
-          >
-            <Edit className="w-3 h-3 mr-1" />
-            Изменить
-          </Button>
-          {row.role !== 'superuser' && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => deleteUserMutation.mutate(row.id)}
-            >
-              <Trash2 className="w-3 h-3 mr-1" />
-              Удалить
-            </Button>
-          )}
-        </div>
-      ),
-    },
-  ];
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -362,7 +286,7 @@ export default function UserManagement() {
               </div>
               <div>
                 <Label htmlFor="edit-role">Роль</Label>
-                <Select name="role" defaultValue={editingUser.role}>
+                <Select name="role" defaultValue={editingUser.role || "user"}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -380,20 +304,14 @@ export default function UserManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit LPTracker Dialog */}
+      {/* LPTracker Settings Dialog */}
       <Dialog open={!!editingLpTracker} onOpenChange={() => setEditingLpTracker(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Настройка LPTracker для пользователя</DialogTitle>
+            <DialogTitle>Настройка LPTracker для {editingLpTracker?.username}</DialogTitle>
           </DialogHeader>
           {editingLpTracker && (
             <form onSubmit={handleUpdateLpTracker} className="space-y-4">
-              <div>
-                <Label>Пользователь</Label>
-                <p className="text-sm text-muted-foreground">
-                  {editingLpTracker.username}
-                </p>
-              </div>
               <div>
                 <Label htmlFor="projectId">ID проекта LPTracker</Label>
                 <Input
@@ -403,6 +321,9 @@ export default function UserManagement() {
                   placeholder="Введите ID проекта"
                   required
                 />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Уникальный идентификатор проекта пользователя в LPTracker
+                </p>
               </div>
               <Button type="submit" disabled={updateLpTrackerMutation.isPending}>
                 {updateLpTrackerMutation.isPending ? "Сохранение..." : "Сохранить"}

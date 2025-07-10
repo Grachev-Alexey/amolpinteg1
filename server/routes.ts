@@ -1049,26 +1049,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Setup LPTracker webhook for a user
-  app.post('/api/lptracker/setup-webhook', requireAuth, async (req: any, res) => {
+  // Setup LPTracker webhook (global for admin)
+  app.post('/api/lptracker/webhook', requireSuperuser, async (req: any, res) => {
     try {
-      const userId = req.session.userId;
       const { webhookUrl } = req.body;
       
       if (!webhookUrl) {
-        return res.status(400).json({ message: 'Webhook URL is required' });
+        return res.status(400).json({ message: 'Webhook URL обязателен' });
       }
       
-      const result = await lpTrackerService.setupWebhook(userId, webhookUrl);
+      const result = await lpTrackerService.setupWebhook(webhookUrl);
       
       if (result) {
         res.json({ success: true, message: 'Webhook установлен успешно' });
       } else {
-        res.json({ success: false, message: 'Не удалось установить webhook' });
+        res.status(500).json({ success: false, message: 'Не удалось установить webhook' });
       }
     } catch (error) {
       console.error('Error setting up LPTracker webhook:', error);
       res.status(500).json({ success: false, message: 'Ошибка при установке webhook' });
+    }
+  });
+
+  // Remove LPTracker webhook
+  app.delete('/api/lptracker/webhook', requireSuperuser, async (req: any, res) => {
+    try {
+      const result = await lpTrackerService.removeWebhook();
+      
+      if (result) {
+        res.json({ success: true, message: 'Webhook удален успешно' });
+      } else {
+        res.status(500).json({ success: false, message: 'Не удалось удалить webhook' });
+      }
+    } catch (error) {
+      console.error('Error removing LPTracker webhook:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при удалении webhook' });
+    }
+  });
+
+  // Get LPTracker webhook status
+  app.get('/api/lptracker/webhook-status', requireSuperuser, async (req: any, res) => {
+    try {
+      const result = await lpTrackerService.getWebhookStatus();
+      res.json(result);
+    } catch (error) {
+      console.error('Error getting LPTracker webhook status:', error);
+      res.status(500).json({ message: 'Не удалось получить статус webhook' });
     }
   });
 

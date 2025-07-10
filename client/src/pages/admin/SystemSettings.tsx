@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Database, Shield, Mail, Bell, RefreshCw, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import AdminPageHeader from "@/components/AdminPageHeader";
 
 export default function SystemSettings() {
   const { toast } = useToast();
@@ -142,11 +143,12 @@ export default function SystemSettings() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 mb-6">
-        <Settings className="h-6 w-6 text-blue-500" />
-        <h1 className="text-2xl font-bold">Системные настройки</h1>
-      </div>
+    <div className="space-y-6">
+      <AdminPageHeader
+        icon={Settings}
+        title="Системные настройки"
+        description="Конфигурация системы и глобальных интеграций"
+      />
 
       <Tabs defaultValue="lptracker" className="w-full">
         <TabsList className="grid w-full grid-cols-3">

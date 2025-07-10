@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuthRedirect } from "@/lib/authRedirect";
 import DataTable from "@/components/DataTable";
+import AdminPageHeader from "@/components/AdminPageHeader";
 import { 
   AlertCircle, 
   Info, 
@@ -140,11 +141,26 @@ export default function Logs() {
       )
     },
     {
+      key: "userId",
+      label: "Пользователь",
+      render: (value: string) => (
+        <div className="text-sm">
+          {value ? (
+            <Badge variant="outline" className="text-xs">
+              {value.substring(0, 8)}...
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">Система</span>
+          )}
+        </div>
+      )
+    },
+    {
       key: "message",
       label: "Сообщение",
       sortable: true,
       render: (value: string) => (
-        <div className="font-medium max-w-md">
+        <div className="font-medium max-w-md text-foreground">
           {formatLogMessage(value)}
         </div>
       )
@@ -191,26 +207,21 @@ export default function Logs() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Логи системы</h1>
-          <p className="text-muted-foreground mt-1">
-            Мониторинг и отслеживание операций системы
-          </p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={handleRefresh}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Обновить
-          </Button>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
-            Экспорт
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <AdminPageHeader
+        icon={FileText}
+        title="Логи системы"
+        description="Мониторинг и отслеживание операций системы"
+      >
+        <Button variant="outline" onClick={handleRefresh}>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Обновить
+        </Button>
+        <Button variant="outline" onClick={handleExport}>
+          <Download className="w-4 h-4 mr-2" />
+          Экспорт
+        </Button>
+      </AdminPageHeader>
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -322,18 +333,22 @@ export default function Logs() {
       </Card>
 
       {/* Logs Table */}
-      <Card>
+      <Card className="bg-card/60 border-border">
         <CardHeader>
-          <CardTitle>Журнал событий</CardTitle>
+          <CardTitle className="text-foreground">Журнал событий</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Детальная информация о всех операциях системы
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <DataTable
             data={filteredData}
             columns={columns}
             loading={logsLoading}
-            emptyMessage="Нет логов для отображения."
+            emptyMessage="Нет логов для отображения"
             pagination={true}
-            pageSize={20}
+            pageSize={15}
+            searchable={true}
           />
         </CardContent>
       </Card>
