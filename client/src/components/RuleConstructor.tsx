@@ -87,8 +87,18 @@ export default function RuleConstructor({
   });
 
   // Load LPTracker metadata
-  const { data: lpTrackerProjectsData } = useQuery({
-    queryKey: ['/api/lptracker/metadata/projects'],
+  const { data: lpTrackerContactFieldsData } = useQuery({
+    queryKey: ['/api/lptracker/metadata/contact_fields'],
+    retry: false,
+  });
+
+  const { data: lpTrackerCustomFieldsData } = useQuery({
+    queryKey: ['/api/lptracker/metadata/custom_fields'],
+    retry: false,
+  });
+
+  const { data: lpTrackerFunnelData } = useQuery({
+    queryKey: ['/api/lptracker/metadata/funnel'],
     retry: false,
   });
 
@@ -106,8 +116,10 @@ export default function RuleConstructor({
   const leadsFields = leadsFieldsData?.data?._embedded?.custom_fields || [];
   const contactsFields = contactsFieldsData?.data?._embedded?.custom_fields || [];
   
-  // Extract LPTracker projects
-  const lpTrackerProjects = lpTrackerProjectsData?.data || [];
+  // Extract LPTracker metadata
+  const lpTrackerContactFields = lpTrackerContactFieldsData?.data?.result || [];
+  const lpTrackerCustomFields = lpTrackerCustomFieldsData?.data?.result || [];
+  const lpTrackerFunnelSteps = lpTrackerFunnelData?.data?.result || [];
 
   // Define fields based on webhook source
   const getAvailableFields = () => {
@@ -118,27 +130,36 @@ export default function RuleConstructor({
         fields: [...leadsFields, ...contactsFields]
       };
     } else if (rule.webhookSource === 'lptracker') {
+      // Combine contact fields and custom fields for LPTracker
+      const allLpTrackerFields = [
+        // Standard contact fields
+        { id: 'name', name: 'Имя' },
+        { id: 'phone', name: 'Телефон' },
+        { id: 'email', name: 'Email' },
+        // Contact fields from LPTracker
+        ...lpTrackerContactFields.map((field: any) => ({ 
+          id: field.id, 
+          name: field.name,
+          type: field.type 
+        })),
+        // Custom fields from LPTracker
+        ...lpTrackerCustomFields.map((field: any) => ({ 
+          id: field.id, 
+          name: field.name,
+          type: field.type 
+        }))
+      ];
+
       return {
-        projects: lpTrackerProjects,
-        statuses: [
-          { id: 'new', name: 'Новый' },
-          { id: 'in_progress', name: 'В работе' },
-          { id: 'completed', name: 'Завершен' },
-          { id: 'rejected', name: 'Отклонен' }
-        ],
-        fields: [
-          { id: 'name', name: 'Имя' },
-          { id: 'phone', name: 'Телефон' },
-          { id: 'email', name: 'Email' },
-          { id: 'comment', name: 'Комментарий' },
-          { id: 'project_id', name: 'ID проекта' },
-          { id: 'utm_source', name: 'UTM Source' },
-          { id: 'utm_medium', name: 'UTM Medium' },
-          { id: 'utm_campaign', name: 'UTM Campaign' }
-        ]
+        pipelines: [], // LPTracker doesn't have pipelines, only funnel steps
+        statuses: lpTrackerFunnelSteps.map((step: any) => ({
+          id: step.id,
+          name: step.name
+        })),
+        fields: allLpTrackerFields
       };
     }
-    return { pipelines: [], statuses: [], fields: [], projects: [] };
+    return { pipelines: [], statuses: [], fields: [] };
   };
 
   const availableData = getAvailableFields();
@@ -346,23 +367,8 @@ export default function RuleConstructor({
                   )}
 
                   {condition.type === "pipeline" && rule.webhookSource === 'lptracker' && (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm">равно</span>
-                      <Select
-                        value={condition.value}
-                        onValueChange={(value) => updateCondition(condition.id, "value", value)}
-                      >
-                        <SelectTrigger className="w-48">
-                          <SelectValue placeholder="Выберите проект" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableData.projects?.map((project: any) => (
-                            <SelectItem key={project.id} value={project.id.toString()}>
-                              {project.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded">
+                      LPTracker не использует воронки. Используйте "Статус лида" для проверки этапов воронки.
                     </div>
                   )}
                   
