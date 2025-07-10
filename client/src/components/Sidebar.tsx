@@ -32,9 +32,15 @@ export default function Sidebar() {
       await apiRequest("/api/logout", "POST");
     },
     onSuccess: () => {
-      // Очищаем весь кеш и перенаправляем
+      // Очищаем весь кеш React Query
       queryClient.clear();
-      window.location.href = "/auth";
+      // Принудительная перезагрузка страницы для полной очистки состояния
+      window.location.replace("/auth");
+    },
+    onError: () => {
+      // Даже при ошибке очищаем кеш и перенаправляем
+      queryClient.clear();
+      window.location.replace("/auth");
     },
   });
 

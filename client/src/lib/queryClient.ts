@@ -20,7 +20,15 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
-  return await res.json();
+  
+  // Проверяем, что response содержит данные для парсинга
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return await res.json();
+  }
+  
+  // Если не JSON, возвращаем текст
+  return await res.text();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -38,7 +46,15 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    
+    // Проверяем, что response содержит данные для парсинга
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return await res.json();
+    }
+    
+    // Если не JSON, возвращаем текст
+    return await res.text();
   };
 
 export const queryClient = new QueryClient({

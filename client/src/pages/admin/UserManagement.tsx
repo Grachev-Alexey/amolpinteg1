@@ -335,7 +335,7 @@ export default function UserManagement() {
             pagination={true}
             pageSize={10}
             emptyMessage="Нет пользователей для отображения"
-            loading={isLoading}
+            loading={usersLoading}
           />
         </CardContent>
       </Card>
