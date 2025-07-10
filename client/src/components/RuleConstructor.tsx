@@ -37,13 +37,29 @@ export default function RuleConstructor({
     { value: "lptracker", label: "LPTracker" },
   ];
 
-  const conditionTypes = [
-    { value: "pipeline", label: "Воронка" },
-    { value: "status", label: "Статус" },
-    { value: "field_equals", label: "Поле равно" },
-    { value: "field_contains", label: "Поле содержит" },
-    { value: "field_not_empty", label: "Поле заполнено" },
-  ];
+  // Define condition types based on webhook source
+  const getConditionTypes = () => {
+    if (rule.webhookSource === 'amocrm') {
+      return [
+        { value: "pipeline", label: "Воронка" },
+        { value: "status", label: "Статус" },
+        { value: "field_equals", label: "Поле равно" },
+        { value: "field_contains", label: "Поле содержит" },
+        { value: "field_not_empty", label: "Поле заполнено" },
+      ];
+    } else if (rule.webhookSource === 'lptracker') {
+      return [
+        { value: "pipeline", label: "Проект" },
+        { value: "status", label: "Статус лида" },
+        { value: "field_equals", label: "Поле равно" },
+        { value: "field_contains", label: "Поле содержит" },
+        { value: "field_not_empty", label: "Поле заполнено" },
+      ];
+    }
+    return [];
+  };
+
+  const conditionTypes = getConditionTypes();
 
   const actionTypes = [
     { value: "create_amocrm_lead", label: "Создать сделку в AmoCRM" },
@@ -70,6 +86,12 @@ export default function RuleConstructor({
     retry: false,
   });
 
+  // Load LPTracker metadata
+  const { data: lpTrackerProjectsData } = useQuery({
+    queryKey: ['/api/lptracker/metadata/projects'],
+    retry: false,
+  });
+
   // Extract pipelines and statuses from metadata
   const pipelines = pipelinesData?.data?._embedded?.pipelines || [];
   const allStatuses = pipelines.flatMap((pipeline: any) => 
@@ -83,6 +105,43 @@ export default function RuleConstructor({
   // Extract custom fields
   const leadsFields = leadsFieldsData?.data?._embedded?.custom_fields || [];
   const contactsFields = contactsFieldsData?.data?._embedded?.custom_fields || [];
+  
+  // Extract LPTracker projects
+  const lpTrackerProjects = lpTrackerProjectsData?.data || [];
+
+  // Define fields based on webhook source
+  const getAvailableFields = () => {
+    if (rule.webhookSource === 'amocrm') {
+      return {
+        pipelines,
+        statuses: allStatuses,
+        fields: [...leadsFields, ...contactsFields]
+      };
+    } else if (rule.webhookSource === 'lptracker') {
+      return {
+        projects: lpTrackerProjects,
+        statuses: [
+          { id: 'new', name: 'Новый' },
+          { id: 'in_progress', name: 'В работе' },
+          { id: 'completed', name: 'Завершен' },
+          { id: 'rejected', name: 'Отклонен' }
+        ],
+        fields: [
+          { id: 'name', name: 'Имя' },
+          { id: 'phone', name: 'Телефон' },
+          { id: 'email', name: 'Email' },
+          { id: 'comment', name: 'Комментарий' },
+          { id: 'project_id', name: 'ID проекта' },
+          { id: 'utm_source', name: 'UTM Source' },
+          { id: 'utm_medium', name: 'UTM Medium' },
+          { id: 'utm_campaign', name: 'UTM Campaign' }
+        ]
+      };
+    }
+    return { pipelines: [], statuses: [], fields: [], projects: [] };
+  };
+
+  const availableData = getAvailableFields();
 
   const addCondition = () => {
     const newCondition = {
@@ -265,7 +324,7 @@ export default function RuleConstructor({
                     </SelectContent>
                   </Select>
                   
-                  {condition.type === "pipeline" && (
+                  {condition.type === "pipeline" && rule.webhookSource === 'amocrm' && (
                     <div className="flex items-center space-x-2">
                       <span className="text-sm">равно</span>
                       <Select
@@ -276,9 +335,30 @@ export default function RuleConstructor({
                           <SelectValue placeholder="Выберите воронку" />
                         </SelectTrigger>
                         <SelectContent>
-                          {pipelines.map((pipeline: any) => (
+                          {availableData.pipelines?.map((pipeline: any) => (
                             <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
                               {pipeline.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {condition.type === "pipeline" && rule.webhookSource === 'lptracker' && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm">равно</span>
+                      <Select
+                        value={condition.value}
+                        onValueChange={(value) => updateCondition(condition.id, "value", value)}
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Выберите проект" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableData.projects?.map((project: any) => (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -297,9 +377,12 @@ export default function RuleConstructor({
                           <SelectValue placeholder="Выберите статус" />
                         </SelectTrigger>
                         <SelectContent>
-                          {allStatuses.map((status: any) => (
+                          {availableData.statuses?.map((status: any) => (
                             <SelectItem key={status.id} value={status.id.toString()}>
-                              {status.pipelineName}: {status.name}
+                              {rule.webhookSource === 'amocrm' 
+                                ? `${status.pipelineName}: ${status.name}`
+                                : status.name
+                              }
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -316,14 +399,9 @@ export default function RuleConstructor({
                         <SelectValue placeholder="Выберите поле" />
                       </SelectTrigger>
                       <SelectContent>
-                        {leadsFields.map((field: any) => (
-                          <SelectItem key={`leads-${field.id}`} value={field.id.toString()}>
-                            📋 {field.name}
-                          </SelectItem>
-                        ))}
-                        {contactsFields.map((field: any) => (
-                          <SelectItem key={`contacts-${field.id}`} value={field.id.toString()}>
-                            👤 {field.name}
+                        {availableData.fields?.map((field: any) => (
+                          <SelectItem key={field.id} value={field.id.toString()}>
+                            {rule.webhookSource === 'amocrm' ? '📋' : '🎯'} {field.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -340,14 +418,9 @@ export default function RuleConstructor({
                           <SelectValue placeholder="Выберите поле" />
                         </SelectTrigger>
                         <SelectContent>
-                          {leadsFields.map((field: any) => (
-                            <SelectItem key={`leads-${field.id}`} value={field.id.toString()}>
-                              📋 {field.name}
-                            </SelectItem>
-                          ))}
-                          {contactsFields.map((field: any) => (
-                            <SelectItem key={`contacts-${field.id}`} value={field.id.toString()}>
-                              👤 {field.name}
+                          {availableData.fields?.map((field: any) => (
+                            <SelectItem key={field.id} value={field.id.toString()}>
+                              {rule.webhookSource === 'amocrm' ? '📋' : '🎯'} {field.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
