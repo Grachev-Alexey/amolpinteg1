@@ -29,15 +29,12 @@ export default function FieldMappingEditor({
   targetTitle
 }: FieldMappingEditorProps) {
   const addMapping = () => {
-    console.log('Adding new mapping...', mappings);
     const newMapping: FieldMapping = {
       id: `mapping_${Date.now()}`,
       sourceField: '',
       targetField: ''
     };
-    const newMappings = [...mappings, newMapping];
-    console.log('New mappings:', newMappings);
-    onMappingsChange(newMappings);
+    onMappingsChange([...mappings, newMapping]);
   };
 
   const updateMapping = (id: string, field: 'sourceField' | 'targetField', value: string) => {

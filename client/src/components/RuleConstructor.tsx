@@ -344,7 +344,6 @@ export default function RuleConstructor({
 
   // Обновляем маппинг полей для действия
   const updateActionFieldMappings = (actionId: string, mappings: Array<{id: string, sourceField: string, targetField: string}>) => {
-    console.log('updateActionFieldMappings called:', { actionId, mappings });
     setRule({
       ...rule,
       actions: {
@@ -352,9 +351,9 @@ export default function RuleConstructor({
         list: rule.actions.list.map((a: any) => 
           a.id === actionId ? { 
             ...a, 
-            fieldMappings: mappings.reduce((acc, mapping) => {
-              // Сохраняем все маппинги, включая пустые для отображения
-              const key = mapping.sourceField || `temp_${mapping.id}`;
+            fieldMappings: mappings.reduce((acc, mapping, index) => {
+              // Используем стабильный ключ для сохранения порядка
+              const key = mapping.sourceField || `temp_${index}_${mapping.id}`;
               acc[key] = mapping.targetField || '';
               return acc;
             }, {} as any)
@@ -664,13 +663,20 @@ export default function RuleConstructor({
                         mappings={(() => {
                           // Преобразуем старый формат fieldMappings в новый формат массива
                           const fieldMappings = action.fieldMappings || {};
-                          const result = Object.entries(fieldMappings).map(([sourceField, targetField], index) => ({
-                            id: sourceField.startsWith('temp_') ? sourceField.replace('temp_', '') : `mapping_${index}_${sourceField}`,
+                          // Сортируем по ключам для стабильного порядка
+                          const sortedEntries = Object.entries(fieldMappings).sort(([a], [b]) => {
+                            // Temp поля в конце
+                            if (a.startsWith('temp_') && !b.startsWith('temp_')) return 1;
+                            if (!a.startsWith('temp_') && b.startsWith('temp_')) return -1;
+                            // Остальные по алфавиту
+                            return a.localeCompare(b);
+                          });
+                          
+                          return sortedEntries.map(([sourceField, targetField], index) => ({
+                            id: sourceField.startsWith('temp_') ? sourceField.replace(/temp_\d+_/, '') : `mapping_${index}_${sourceField}`,
                             sourceField: sourceField.startsWith('temp_') ? '' : sourceField,
                             targetField: targetField as string
                           }));
-                          console.log('Converted mappings for display:', result);
-                          return result;
                         })()}
                         sourceFields={getSourceFields()}
                         targetFields={getTargetFields(action.type)}
