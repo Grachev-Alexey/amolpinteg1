@@ -172,6 +172,8 @@ export default function WebhookManagement() {
                 (w: any) => w.userId === user.userId
               );
               const isWebhookActive = userWebhook?.webhookActive || false;
+              
+              console.log('[TEMP DEBUG Frontend] User:', user.username, 'userWebhook:', userWebhook, 'isWebhookActive:', isWebhookActive);
 
               return (
                 <Card key={user.userId}>
