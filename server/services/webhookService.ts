@@ -475,7 +475,7 @@ export class WebhookService {
 
           // Подготавливаем данные для синхронизации из различных источников
           const webhookData = {
-            name: eventData.leadDetails?.name || eventData.contactsDetails?.[0]?.name || eventData.callData?.contact_name || 'Новый контакт',
+            name: eventData.contactsDetails?.[0]?.name || eventData.callData?.contact_name || eventData.leadDetails?.name || 'Новый контакт',
             first_name: eventData.contactsDetails?.[0]?.first_name || eventData.callData?.contact_name || '',
             last_name: eventData.contactsDetails?.[0]?.last_name || '',
             phone: this.extractPhoneFromContact(eventData.contactsDetails?.[0]) || eventData.callData?.phone || '',
@@ -547,6 +547,9 @@ export class WebhookService {
       return mappedData;
     }
 
+    // Инициализируем объект для кастомных полей LPTracker
+    const lpTrackerCustomFields: any = {};
+
     // Применяем маппинг полей
     for (const [sourceField, targetField] of Object.entries(fieldMappings)) {
       if (sourceField && targetField) {
@@ -562,15 +565,28 @@ export class WebhookService {
         }, 'webhook');
         
         if (sourceValue !== undefined && sourceValue !== null && sourceValue !== '') {
-          // Устанавливаем значение в целевое поле
-          mappedData[targetField as string] = sourceValue;
-          
-          // Логируем примененное маппинг
-          this.logService.log(eventData.userId, 'info', `Применен маппинг поля: ${sourceField} → ${targetField}`, { 
-            sourceField, 
-            targetField, 
-            sourceValue 
-          }, 'webhook');
+          // Проверяем, является ли целевое поле кастомным полем LPTracker (числовой ID)
+          if (/^\d+$/.test(targetField as string)) {
+            // Это кастомное поле LPTracker
+            lpTrackerCustomFields[targetField as string] = sourceValue;
+            
+            // Логируем примененное маппинг кастомного поля
+            this.logService.log(eventData.userId, 'info', `Применен маппинг кастомного поля LPTracker: ${sourceField} → ${targetField}`, { 
+              sourceField, 
+              targetField, 
+              sourceValue 
+            }, 'webhook');
+          } else {
+            // Это стандартное поле
+            mappedData[targetField as string] = sourceValue;
+            
+            // Логируем примененное маппинг стандартного поля
+            this.logService.log(eventData.userId, 'info', `Применен маппинг стандартного поля: ${sourceField} → ${targetField}`, { 
+              sourceField, 
+              targetField, 
+              sourceValue 
+            }, 'webhook');
+          }
         } else {
           // Логируем пропущенное маппинг
           this.logService.log(eventData.userId, 'warning', `Маппинг поля пропущен - значение не найдено: ${sourceField}`, { 
@@ -582,6 +598,15 @@ export class WebhookService {
           }, 'webhook');
         }
       }
+    }
+
+    // Добавляем кастомные поля LPTracker в mappedData
+    if (Object.keys(lpTrackerCustomFields).length > 0) {
+      mappedData.lptracker_custom_fields = lpTrackerCustomFields;
+      
+      this.logService.log(eventData.userId, 'info', `Добавлены кастомные поля LPTracker`, { 
+        lpTrackerCustomFields
+      }, 'webhook');
     }
 
     return mappedData;
