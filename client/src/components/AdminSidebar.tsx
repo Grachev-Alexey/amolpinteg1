@@ -38,12 +38,7 @@ export default function AdminSidebar() {
       href: "/admin/users",
       active: location === "/admin/users",
     },
-    {
-      icon: Database,
-      label: "Интеграции",
-      href: "/admin/integrations",
-      active: location === "/admin/integrations",
-    },
+
     {
       icon: Settings,
       label: "Настройки",

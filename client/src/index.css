@@ -110,12 +110,84 @@
 
   /* Improve button visibility in dark theme */
   .dark .btn-outline {
-    @apply border-border;
-    color: hsl(var(--foreground));
+    @apply border-border bg-card text-foreground;
+    border-width: 1px;
   }
 
   .dark .btn-outline:hover {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  /* Fix button contrast in dark theme */
+  .dark button {
+    @apply text-foreground;
+  }
+
+  .dark .bg-white {
+    @apply bg-card;
+  }
+
+  .dark .text-black {
+    @apply text-foreground;
+  }
+
+  .dark .text-gray-500 {
+    @apply text-muted-foreground;
+  }
+
+  .dark .text-gray-600 {
+    @apply text-muted-foreground;
+  }
+
+  .dark .text-gray-700 {
+    @apply text-foreground;
+  }
+
+  .dark .text-gray-800 {
+    @apply text-foreground;
+  }
+
+  .dark .text-gray-900 {
+    @apply text-foreground;
+  }
+
+  /* Fix input visibility */
+  .dark input[type="text"],
+  .dark input[type="email"],
+  .dark input[type="password"],
+  .dark textarea,
+  .dark select {
+    @apply bg-input border-border text-foreground;
+  }
+
+  .dark input[type="text"]:focus,
+  .dark input[type="email"]:focus,
+  .dark input[type="password"]:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    @apply ring-ring border-ring;
+  }
+
+  /* Fix card backgrounds */
+  .dark .bg-gray-50 {
+    @apply bg-card;
+  }
+
+  .dark .bg-gray-100 {
     @apply bg-muted;
-    color: hsl(var(--foreground));
+  }
+
+  /* Ensure proper contrast for all text elements */
+  .dark .prose {
+    @apply text-foreground;
+  }
+
+  .dark .prose h1,
+  .dark .prose h2,
+  .dark .prose h3,
+  .dark .prose h4,
+  .dark .prose h5,
+  .dark .prose h6 {
+    @apply text-foreground;
   }
 }

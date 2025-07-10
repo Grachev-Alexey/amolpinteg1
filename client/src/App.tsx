@@ -18,6 +18,7 @@ import AdminLayout from "@/components/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import UserManagement from "@/pages/admin/UserManagement";
 import SystemSettings from "@/pages/admin/SystemSettings";
+import AdminMonitoring from "@/pages/AdminMonitoring";
 
 function Router() {
   const { user, isLoading } = useAuth();
@@ -47,6 +48,7 @@ function Router() {
           <Route path="/admin/users" component={UserManagement} />
           <Route path="/admin/settings" component={SystemSettings} />
           <Route path="/admin/logs" component={Logs} />
+          <Route path="/admin/monitoring" component={AdminMonitoring} />
         </AdminLayout>
       ) : (
         <Layout>

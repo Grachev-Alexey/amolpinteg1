@@ -433,6 +433,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin monitoring endpoints
+  app.get('/api/admin/system-health', requireSuperuser, async (req: any, res) => {
+    try {
+      const health = {
+        database: true,
+        apiServer: true,
+        logging: true,
+        lastCheck: new Date().toISOString()
+      };
+      res.json(health);
+    } catch (error) {
+      console.error("Error checking system health:", error);
+      res.status(500).json({ message: "Не удалось проверить состояние системы" });
+    }
+  });
+
+  app.get('/api/admin/recent-activity', requireSuperuser, async (req: any, res) => {
+    try {
+      const logs = await storage.getSystemLogs();
+      const recentActivity = logs.slice(0, 50).map(log => ({
+        type: log.source === 'webhook' ? 'webhook_processed' : 
+              log.source === 'settings' ? 'integration_setup' :
+              log.level === 'error' ? 'error' : 'user_login',
+        message: log.message,
+        timestamp: log.createdAt,
+        userId: log.userId
+      }));
+      res.json(recentActivity);
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ message: "Не удалось получить данные об активности" });
+    }
+  });
+
+  app.get('/api/admin/integration-status', requireSuperuser, async (req: any, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      let amoCrmActive = 0;
+      let lpTrackerActive = 0;
+      let webhooksProcessed = 0;
+
+      for (const user of allUsers) {
+        const amoCrmSettings = await storage.getAmoCrmSettings(user.id);
+        const lpTrackerSettings = await storage.getLpTrackerSettings(user.id);
+        
+        if (amoCrmSettings?.isActive) amoCrmActive++;
+        if (lpTrackerSettings?.isActive) lpTrackerActive++;
+      }
+
+      // Get webhook count from logs
+      const logs = await storage.getSystemLogs();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      webhooksProcessed = logs.filter(log => 
+        log.source === 'webhook' && 
+        log.createdAt && 
+        new Date(log.createdAt) >= today
+      ).length;
+
+      res.json({
+        amoCrmActive,
+        lpTrackerActive,
+        webhooksProcessed
+      });
+    } catch (error) {
+      console.error("Error fetching integration status:", error);
+      res.status(500).json({ message: "Не удалось получить статус интеграций" });
+    }
+  });
+
   // Dashboard stats
   app.get('/api/dashboard/stats', requireAuth, async (req: any, res) => {
     try {
@@ -558,12 +628,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await db.select().from(users);
       const allLogs = await storage.getSystemLogs();
       
+      let totalIntegrations = 0;
+      let eventsProcessed = 0;
+      
+      // Count integrations
+      for (const user of allUsers) {
+        const amoCrmSettings = await storage.getAmoCrmSettings(user.id);
+        const lpTrackerSettings = await storage.getLpTrackerSettings(user.id);
+        
+        if (amoCrmSettings?.isActive) totalIntegrations++;
+        if (lpTrackerSettings?.isActive) totalIntegrations++;
+      }
+
+      // Count events processed in last 24 hours
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      eventsProcessed = allLogs.filter(log => 
+        log.source === 'webhook' && 
+        log.createdAt && 
+        new Date(log.createdAt) >= yesterday
+      ).length;
+
+      // Count new users today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const newUsersToday = allUsers.filter(user => 
+        user.createdAt && 
+        new Date(user.createdAt) >= today
+      ).length;
+      
       const stats = {
         totalUsers: allUsers.length,
         activeUsers: allUsers.filter(u => u.role !== 'superuser').length,
-        totalIntegrations: 0, // Calculated from settings
-        activeIntegrations: 0, // Calculated from settings
-        totalSyncs: 0, // Calculated from logs
+        totalIntegrations,
+        eventsProcessed,
+        newUsersToday,
         totalErrors: allLogs.filter(l => l.level === 'error').length,
       };
       

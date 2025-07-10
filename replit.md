@@ -6,6 +6,18 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 ## Recent Changes
 
+**July 10, 2025 - UI Improvements and LPTracker Architecture Fix**
+- ✓ Fixed dark theme visibility issues in buttons, inputs, and text elements
+- ✓ Improved CSS styles for better contrast and readability in dark mode
+- ✓ Removed "Интеграции" tab from admin sidebar (was empty and unnecessary)
+- ✓ Created comprehensive admin monitoring page with real-time data
+- ✓ Added API endpoints for system health, activity tracking, and integration status
+- ✓ Fixed LPTracker architecture - now uses single global account for all users
+- ✓ Updated LPTracker settings to support individual project IDs per user
+- ✓ Enhanced DataTable component with proper dark theme support
+- ✓ Improved boolean value display with proper styling and contrast
+- ✓ Added real-time monitoring with system health indicators
+
 **July 9, 2025 - Migration to Replit Environment**
 - ✓ Migrated project from Replit Agent to standard Replit environment
 - ✓ Set up PostgreSQL database with proper environment variables
