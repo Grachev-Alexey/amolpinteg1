@@ -1,7 +1,7 @@
 import { useAuth } from "@/lib/auth";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Home, 
@@ -25,13 +25,16 @@ const navigationItems = [
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("/api/logout", "POST");
     },
     onSuccess: () => {
-      window.location.href = "/";
+      // Очищаем весь кеш и перенаправляем
+      queryClient.clear();
+      window.location.href = "/auth";
     },
   });
 

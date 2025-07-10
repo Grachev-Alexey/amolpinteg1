@@ -20,7 +20,8 @@ export default function AdminSidebar() {
   const logoutMutation = useMutation({
     mutationFn: () => apiRequest("/api/logout", "POST"),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      // Очищаем весь кеш и перенаправляем
+      queryClient.clear();
       window.location.href = "/auth";
     },
   });
