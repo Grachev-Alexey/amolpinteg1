@@ -3,6 +3,11 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { createSuperuserIfNotExists } from "./superuser";
 
+// Ensure SESSION_SECRET is set
+if (!process.env.SESSION_SECRET) {
+  process.env.SESSION_SECRET = 'fallback-secret-key-for-development-only';
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
