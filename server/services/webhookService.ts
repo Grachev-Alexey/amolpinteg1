@@ -268,6 +268,18 @@ export class WebhookService {
             userId
           };
 
+          // Детальное логирование для отладки
+          await this.logService.log(userId, 'info', `AmoCRM - Проверяем правило "${rule.name}"`, { 
+            ruleId: rule.id,
+            ruleName: rule.name,
+            leadId,
+            conditions: rule.conditions,
+            pipelineFromLead: leadDetails.pipeline_id,
+            statusFromLead: leadDetails.status_id,
+            pipelineFromPayload: originalPayload?.['leads[add][0][pipeline_id]'],
+            statusFromPayload: originalPayload?.['leads[add][0][status_id]']
+          }, 'webhook');
+
           if (this.checkConditions(rule.conditions, eventData)) {
             await this.logService.log(userId, 'info', `AmoCRM - Правило "${rule.name}" подходит для сделки ${leadId}`, { 
               ruleId: rule.id,
@@ -401,24 +413,52 @@ export class WebhookService {
 
   private checkConditions(conditions: any, eventData: any): boolean {
     try {
-      // Простая проверка условий - можно расширить
       if (!conditions || !conditions.rules) {
         return false;
       }
 
-      return conditions.rules.every((condition: any) => {
+      const operator = conditions.operator || 'AND';
+      const results = conditions.rules.map((condition: any) => {
         switch (condition.type) {
           case 'event_type':
             return eventData.type === condition.value;
+          
+          case 'pipeline':
+            // Проверяем ID воронки из данных сделки
+            const pipelineId = eventData.leadDetails?.pipeline_id || eventData.webhookPayload?.['leads[add][0][pipeline_id]'];
+            return String(pipelineId) === String(condition.value);
+          
+          case 'status':
+            // Проверяем ID статуса из данных сделки
+            const statusId = eventData.leadDetails?.status_id || eventData.webhookPayload?.['leads[add][0][status_id]'];
+            return String(statusId) === String(condition.value);
+          
           case 'field_equals':
-            return eventData[condition.field] === condition.value;
+            const fieldValue = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == condition.field)?.values?.[0]?.value;
+            return String(fieldValue) === String(condition.value);
+          
           case 'field_contains':
-            return eventData[condition.field]?.includes(condition.value);
+            const fieldValueContains = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == condition.field)?.values?.[0]?.value;
+            return fieldValueContains?.includes(condition.value);
+          
+          case 'field_not_empty':
+            const fieldValueNotEmpty = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == condition.field)?.values?.[0]?.value;
+            return fieldValueNotEmpty != null && fieldValueNotEmpty !== '';
+          
           default:
+            console.log(`Неизвестный тип условия: ${condition.type}`, condition);
             return false;
         }
       });
+
+      // Применяем оператор AND/OR
+      if (operator === 'OR') {
+        return results.some(result => result);
+      } else {
+        return results.every(result => result);
+      }
     } catch (error) {
+      console.error('Ошибка проверки условий:', error);
       return false;
     }
   }
