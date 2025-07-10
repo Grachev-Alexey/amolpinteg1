@@ -104,6 +104,7 @@ The application follows a full-stack architecture with clear separation between 
 
 ### Key Features
 - **Multi-user Support**: Each user has isolated settings and rules
+- **Per-user Webhook Management**: Individual LPTracker webhook configuration for each user with project_id
 - **Real-time Updates**: Webhook processing and live status updates
 - **Background Processing**: File uploads and data synchronization
 - **Comprehensive Logging**: All operations tracked for debugging
@@ -111,4 +112,4 @@ The application follows a full-stack architecture with clear separation between 
 - **Dark Theme**: Exclusively dark theme implementation as per requirements
 - **Russian Localization**: Complete Russian language interface
 - **Unified Sync Logic**: Automatic find-or-create logic for contacts and leads
-- **API Integration**: Full AmoCRM v4 and LPTracker API implementation
+- **API Integration**: Full AmoCRM v4 and LPTracker API implementation with correct webhook endpoints
