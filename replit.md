@@ -52,10 +52,10 @@ The application follows a full-stack architecture with clear separation between 
 - **System Logs**: Comprehensive audit trail
 
 ### Service Layer
-- **SmartFieldMapper**: Intelligent field mapping using CRM metadata to automatically determine field placement
-- **AmoCrmService**: Handles API connections, metadata retrieval, and data synchronization with smart mapping
-- **LpTrackerService**: Manages LPTracker API interactions and lead processing with smart mapping
-- **WebhookService**: Processes incoming webhooks from external systems with enhanced field mapping
+- **SmartFieldMapper**: User-controlled field mapping system that lets users specify exactly which fields map to which CRM entities (contact/lead) and fields
+- **AmoCrmService**: Handles API connections, metadata retrieval, and data synchronization with user-defined mapping
+- **LpTrackerService**: Manages LPTracker API interactions and lead processing with user-defined mapping
+- **WebhookService**: Processes incoming webhooks from external systems with user-controlled field mapping
 - **FileService**: Manages XLSX file uploads and background processing
 - **LogService**: Centralized logging for all system operations
 
@@ -73,8 +73,8 @@ The application follows a full-stack architecture with clear separation between 
 3. **Metadata Sync**: System caches external service metadata for rule construction
 4. **Rule Creation**: Users build conditional logic using visual interface
 5. **Webhook Processing**: Incoming webhooks trigger rule evaluation
-6. **Smart Field Mapping**: System automatically determines field placement using metadata
-7. **Data Transformation**: Rules execute actions with intelligent field distribution
+6. **User-Controlled Field Mapping**: Users specify exactly which source fields map to which target CRM entities and fields
+7. **Data Transformation**: Rules execute actions using user-defined field mappings
 8. **File Processing**: XLSX uploads are processed in background with status tracking
 9. **Logging**: All operations are logged for audit and debugging
 

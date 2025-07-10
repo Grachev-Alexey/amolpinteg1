@@ -17,8 +17,8 @@ export class SmartFieldMapper {
   }
 
   /**
-   * "Умное" маппинг полей с использованием метаданных CRM
-   * Автоматически определяет, куда записывать поля (контакт, лид, кастомные поля)
+   * Маппинг полей с использованием пользовательских настроек маппирования
+   * Пользователь сам указывает, в какую сущность (контакт/лид) и в какое поле записывать данные
    */
   async smartMapFields(userId: string, fieldMappings: any, sourceData: any, targetCrm: 'amocrm' | 'lptracker'): Promise<FieldMappingResult> {
     const result: FieldMappingResult = {
@@ -31,17 +31,13 @@ export class SmartFieldMapper {
       return result;
     }
 
-    // Получаем метаданные целевой CRM
-    const metadata = await this.getTargetCrmMetadata(userId, targetCrm);
-    
-    await this.logService.log(userId, 'info', `Smart Field Mapper - Начинаем умное маппирование для ${targetCrm}`, { 
-      fieldMappings,
-      hasMetadata: !!metadata
+    await this.logService.log(userId, 'info', `Smart Field Mapper - Начинаем маппирование для ${targetCrm}`, { 
+      fieldMappings
     }, 'smart_mapper');
 
     // Обрабатываем каждое маппирование
-    for (const [sourceField, targetFieldId] of Object.entries(fieldMappings)) {
-      if (!sourceField || !targetFieldId) continue;
+    for (const [sourceField, targetMapping] of Object.entries(fieldMappings)) {
+      if (!sourceField || !targetMapping) continue;
 
       // Получаем значение из исходных данных
       const sourceValue = this.extractSourceValue(sourceField, sourceData);
@@ -49,102 +45,31 @@ export class SmartFieldMapper {
         continue;
       }
 
-      // Определяем тип целевого поля и где его записать
-      const fieldPlacement = await this.determineFieldPlacement(targetFieldId as string, targetCrm, metadata, userId);
-      
-      if (fieldPlacement) {
-        switch (fieldPlacement.location) {
-          case 'contact':
-            if (targetCrm === 'lptracker') {
-              result.contactFields[targetFieldId as string] = sourceValue;
-            } else {
-              // AmoCRM - записываем в массив custom_fields_values
-              if (!result.contactFields.custom_fields_values) {
-                result.contactFields.custom_fields_values = [];
-              }
-              result.contactFields.custom_fields_values.push({
-                field_id: parseInt(targetFieldId as string),
-                values: [{ value: sourceValue }]
-              });
-            }
-            break;
-          
-          case 'lead':
-            if (targetCrm === 'lptracker') {
-              result.leadFields[targetFieldId as string] = sourceValue;
-            } else {
-              // AmoCRM - записываем в массив custom_fields_values
-              if (!result.leadFields.custom_fields_values) {
-                result.leadFields.custom_fields_values = [];
-              }
-              result.leadFields.custom_fields_values.push({
-                field_id: parseInt(targetFieldId as string),
-                values: [{ value: sourceValue }]
-              });
-            }
-            break;
-          
-          case 'standard':
-            // Стандартные поля (name, phone, email)
-            if (fieldPlacement.standardField === 'name') {
-              result.contactFields.name = sourceValue;
-            } else if (fieldPlacement.standardField === 'phone') {
-              if (targetCrm === 'lptracker') {
-                result.contactFields.phone = sourceValue;
-              } else {
-                // AmoCRM phone - находим ID поля телефона из метаданных
-                const phoneFieldId = await this.findStandardFieldId(userId, targetCrm, 'phone', metadata);
-                if (phoneFieldId) {
-                  if (!result.contactFields.custom_fields_values) {
-                    result.contactFields.custom_fields_values = [];
-                  }
-                  result.contactFields.custom_fields_values.push({
-                    field_id: phoneFieldId,
-                    values: [{ value: sourceValue, enum_code: 'WORK' }]
-                  });
-                } else {
-                  await this.logService.log(userId, 'warning', `Smart Field Mapper - Не найдено поле телефона в метаданных AmoCRM`, { sourceValue }, 'smart_mapper');
-                }
-              }
-            } else if (fieldPlacement.standardField === 'email') {
-              if (targetCrm === 'lptracker') {
-                result.contactFields.email = sourceValue;
-              } else {
-                // AmoCRM email - находим ID поля email из метаданных
-                const emailFieldId = await this.findStandardFieldId(userId, targetCrm, 'email', metadata);
-                if (emailFieldId) {
-                  if (!result.contactFields.custom_fields_values) {
-                    result.contactFields.custom_fields_values = [];
-                  }
-                  result.contactFields.custom_fields_values.push({
-                    field_id: emailFieldId,
-                    values: [{ value: sourceValue, enum_code: 'WORK' }]
-                  });
-                } else {
-                  await this.logService.log(userId, 'warning', `Smart Field Mapper - Не найдено поле email в метаданных AmoCRM`, { sourceValue }, 'smart_mapper');
-                }
-              }
-            }
-            break;
-        }
+      // Новый формат маппирования: { entity: 'contact|lead', field: 'field_id_or_name', type: 'standard|custom' }
+      const mapping = typeof targetMapping === 'string' 
+        ? this.parseOldFormatMapping(targetMapping) 
+        : targetMapping;
 
-        await this.logService.log(userId, 'info', `Smart Field Mapper - Поле успешно замаппировано`, { 
+      if (!mapping || !mapping.entity || !mapping.field) {
+        await this.logService.log(userId, 'warning', `Smart Field Mapper - Неверный формат маппирования`, { 
           sourceField,
-          targetFieldId,
-          sourceValue,
-          fieldPlacement,
-          targetCrm
+          targetMapping
         }, 'smart_mapper');
-      } else {
-        await this.logService.log(userId, 'warning', `Smart Field Mapper - Не удалось определить размещение поля`, { 
-          sourceField,
-          targetFieldId,
-          targetCrm
-        }, 'smart_mapper');
+        continue;
       }
+
+      // Применяем маппирование
+      await this.applyFieldMapping(result, mapping, sourceValue, targetCrm, userId);
+
+      await this.logService.log(userId, 'info', `Smart Field Mapper - Поле успешно замаппировано`, { 
+        sourceField,
+        targetMapping: mapping,
+        sourceValue,
+        targetCrm
+      }, 'smart_mapper');
     }
 
-    await this.logService.log(userId, 'info', `Smart Field Mapper - Результат умного маппирования`, { 
+    await this.logService.log(userId, 'info', `Smart Field Mapper - Результат маппирования`, { 
       contactFieldsCount: Object.keys(result.contactFields).length,
       leadFieldsCount: Object.keys(result.leadFields).length,
       customFieldsCount: Object.keys(result.customFields).length,
@@ -152,6 +77,117 @@ export class SmartFieldMapper {
     }, 'smart_mapper');
 
     return result;
+  }
+
+  /**
+   * Парсит старый формат маппирования (для обратной совместимости)
+   */
+  private parseOldFormatMapping(targetFieldId: string): any {
+    // Стандартные поля
+    const standardFields = {
+      'name': { entity: 'contact', field: 'name', type: 'standard' },
+      'phone': { entity: 'contact', field: 'phone', type: 'standard' },
+      'email': { entity: 'contact', field: 'email', type: 'standard' },
+      'first_name': { entity: 'contact', field: 'name', type: 'standard' },
+      'last_name': { entity: 'contact', field: 'name', type: 'standard' }
+    };
+
+    if (standardFields[targetFieldId]) {
+      return standardFields[targetFieldId];
+    }
+
+    // Если это числовой ID, предполагаем что это кастомное поле
+    if (/^\d+$/.test(targetFieldId)) {
+      // Без метаданных нельзя определить, поэтому возвращаем null
+      return null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Применяет маппирование поля к результату
+   */
+  private async applyFieldMapping(result: FieldMappingResult, mapping: any, sourceValue: any, targetCrm: 'amocrm' | 'lptracker', userId: string): Promise<void> {
+    const { entity, field, type } = mapping;
+
+    if (entity === 'contact') {
+      if (type === 'standard') {
+        // Стандартные поля контакта
+        if (field === 'name') {
+          result.contactFields.name = sourceValue;
+        } else if (field === 'phone') {
+          if (targetCrm === 'lptracker') {
+            result.contactFields.phone = sourceValue;
+          } else {
+            // AmoCRM - находим ID поля телефона из метаданных
+            const phoneFieldId = await this.findStandardFieldId(userId, targetCrm, 'phone');
+            if (phoneFieldId) {
+              if (!result.contactFields.custom_fields_values) {
+                result.contactFields.custom_fields_values = [];
+              }
+              result.contactFields.custom_fields_values.push({
+                field_id: phoneFieldId,
+                values: [{ value: sourceValue, enum_code: 'WORK' }]
+              });
+            }
+          }
+        } else if (field === 'email') {
+          if (targetCrm === 'lptracker') {
+            result.contactFields.email = sourceValue;
+          } else {
+            // AmoCRM - находим ID поля email из метаданных
+            const emailFieldId = await this.findStandardFieldId(userId, targetCrm, 'email');
+            if (emailFieldId) {
+              if (!result.contactFields.custom_fields_values) {
+                result.contactFields.custom_fields_values = [];
+              }
+              result.contactFields.custom_fields_values.push({
+                field_id: emailFieldId,
+                values: [{ value: sourceValue, enum_code: 'WORK' }]
+              });
+            }
+          }
+        }
+      } else if (type === 'custom') {
+        // Кастомные поля контакта
+        if (targetCrm === 'lptracker') {
+          result.contactFields[field] = sourceValue;
+        } else {
+          // AmoCRM
+          if (!result.contactFields.custom_fields_values) {
+            result.contactFields.custom_fields_values = [];
+          }
+          result.contactFields.custom_fields_values.push({
+            field_id: parseInt(field),
+            values: [{ value: sourceValue }]
+          });
+        }
+      }
+    } else if (entity === 'lead') {
+      if (type === 'standard') {
+        // Стандартные поля лида
+        if (field === 'name') {
+          result.leadFields.name = sourceValue;
+        } else if (field === 'price') {
+          result.leadFields.price = sourceValue;
+        }
+      } else if (type === 'custom') {
+        // Кастомные поля лида
+        if (targetCrm === 'lptracker') {
+          result.leadFields[field] = sourceValue;
+        } else {
+          // AmoCRM
+          if (!result.leadFields.custom_fields_values) {
+            result.leadFields.custom_fields_values = [];
+          }
+          result.leadFields.custom_fields_values.push({
+            field_id: parseInt(field),
+            values: [{ value: sourceValue }]
+          });
+        }
+      }
+    }
   }
 
   private async getTargetCrmMetadata(userId: string, targetCrm: 'amocrm' | 'lptracker'): Promise<any> {
@@ -180,58 +216,78 @@ export class SmartFieldMapper {
     }
   }
 
-  private async determineFieldPlacement(targetFieldId: string, targetCrm: 'amocrm' | 'lptracker', metadata: any, userId: string): Promise<{ location: 'contact' | 'lead' | 'standard', standardField?: string } | null> {
-    // Обработка стандартных полей
-    const standardFields = {
-      'name': 'name',
-      'phone': 'phone', 
-      'email': 'email',
-      'first_name': 'name',
-      'last_name': 'name'
+  /**
+   * Получает список доступных полей для маппирования
+   */
+  async getAvailableFields(userId: string, targetCrm: 'amocrm' | 'lptracker'): Promise<{
+    contactFields: { standard: any[], custom: any[] },
+    leadFields: { standard: any[], custom: any[] }
+  }> {
+    const result = {
+      contactFields: { standard: [], custom: [] },
+      leadFields: { standard: [], custom: [] }
     };
 
-    if (standardFields[targetFieldId]) {
-      return { location: 'standard', standardField: standardFields[targetFieldId] };
-    }
+    // Стандартные поля
+    result.contactFields.standard = [
+      { id: 'name', name: 'Имя', type: 'standard' },
+      { id: 'phone', name: 'Телефон', type: 'standard' },
+      { id: 'email', name: 'Email', type: 'standard' }
+    ];
 
-    if (!metadata) {
-      // Если нет метаданных, нельзя определить размещение поля
-      await this.logService.log(userId, 'error', `Smart Field Mapper - Нет метаданных для определения размещения поля`, { 
-        targetFieldId,
+    result.leadFields.standard = [
+      { id: 'name', name: 'Название сделки', type: 'standard' },
+      { id: 'price', name: 'Бюджет', type: 'standard' }
+    ];
+
+    try {
+      const metadata = await this.getTargetCrmMetadata(userId, targetCrm);
+      
+      if (metadata && targetCrm === 'amocrm') {
+        // AmoCRM кастомные поля
+        const contactFields = metadata.contactFields?._embedded?.custom_fields || [];
+        const leadFields = metadata.leadFields?._embedded?.custom_fields || [];
+
+        result.contactFields.custom = contactFields.map((field: any) => ({
+          id: field.id,
+          name: field.name,
+          type: 'custom',
+          code: field.code,
+          field_type: field.type
+        }));
+
+        result.leadFields.custom = leadFields.map((field: any) => ({
+          id: field.id,
+          name: field.name,
+          type: 'custom',
+          code: field.code,
+          field_type: field.type
+        }));
+      } else if (metadata && targetCrm === 'lptracker') {
+        // LPTracker кастомные поля
+        const contactFields = metadata.contactFields?.result || [];
+        const customFields = metadata.customFields?.result || [];
+
+        result.contactFields.custom = contactFields.map((field: any) => ({
+          id: field.id,
+          name: field.name,
+          type: 'custom'
+        }));
+
+        result.leadFields.custom = customFields.map((field: any) => ({
+          id: field.id,
+          name: field.name,
+          type: 'custom'
+        }));
+      }
+    } catch (error) {
+      await this.logService.log(userId, 'error', `Smart Field Mapper - Ошибка получения доступных полей`, { 
+        error: error.message,
         targetCrm
       }, 'smart_mapper');
-      return null;
     }
 
-    if (targetCrm === 'amocrm') {
-      // AmoCRM metadata проверка
-      const contactFields = metadata.contactFields?._embedded?.custom_fields || [];
-      const leadFields = metadata.leadFields?._embedded?.custom_fields || [];
-
-      const isContactField = contactFields.some((field: any) => field.id == targetFieldId);
-      const isLeadField = leadFields.some((field: any) => field.id == targetFieldId);
-
-      if (isContactField) return { location: 'contact' };
-      if (isLeadField) return { location: 'lead' };
-    } else {
-      // LPTracker metadata проверка
-      const contactFields = metadata.contactFields?.result || [];
-      const customFields = metadata.customFields?.result || [];
-
-      const isContactField = contactFields.some((field: any) => field.id == targetFieldId);
-      const isCustomField = customFields.some((field: any) => field.id == targetFieldId);
-
-      if (isContactField) return { location: 'contact' };
-      if (isCustomField) return { location: 'lead' };
-    }
-
-    await this.logService.log(userId, 'warning', `Smart Field Mapper - Поле не найдено в метаданных`, { 
-      targetFieldId,
-      targetCrm,
-      metadataKeys: metadata ? Object.keys(metadata) : []
-    }, 'smart_mapper');
-
-    return null;
+    return result;
   }
 
   private extractSourceValue(sourceField: string, sourceData: any): any {
@@ -273,34 +329,32 @@ export class SmartFieldMapper {
   /**
    * Находит ID стандартного поля (phone, email) в метаданных CRM
    */
-  private async findStandardFieldId(userId: string, targetCrm: 'amocrm' | 'lptracker', fieldType: 'phone' | 'email', metadata: any): Promise<number | null> {
-    if (!metadata) return null;
+  private async findStandardFieldId(userId: string, targetCrm: 'amocrm' | 'lptracker', fieldType: 'phone' | 'email'): Promise<number | null> {
+    if (targetCrm !== 'amocrm') return null;
 
     try {
-      if (targetCrm === 'amocrm') {
-        const contactFields = metadata.contactFields?._embedded?.custom_fields || [];
-        
-        // Ищем поле по типу
-        const standardField = contactFields.find((field: any) => {
-          if (fieldType === 'phone') {
-            return field.type === 'multitext' && field.code === 'PHONE';
-          } else if (fieldType === 'email') {
-            return field.type === 'multitext' && field.code === 'EMAIL';
-          }
-          return false;
-        });
+      const metadata = await this.getTargetCrmMetadata(userId, targetCrm);
+      if (!metadata) return null;
 
-        if (standardField) {
-          await this.logService.log(userId, 'info', `Smart Field Mapper - Найдено стандартное поле ${fieldType}`, { 
-            fieldId: standardField.id,
-            fieldName: standardField.name,
-            fieldCode: standardField.code
-          }, 'smart_mapper');
-          return standardField.id;
+      const contactFields = metadata.contactFields?._embedded?.custom_fields || [];
+      
+      // Ищем поле по типу
+      const standardField = contactFields.find((field: any) => {
+        if (fieldType === 'phone') {
+          return field.type === 'multitext' && field.code === 'PHONE';
+        } else if (fieldType === 'email') {
+          return field.type === 'multitext' && field.code === 'EMAIL';
         }
-      } else {
-        // LPTracker использует прямые поля, не нужно искать ID
-        return null;
+        return false;
+      });
+
+      if (standardField) {
+        await this.logService.log(userId, 'info', `Smart Field Mapper - Найдено стандартное поле ${fieldType}`, { 
+          fieldId: standardField.id,
+          fieldName: standardField.name,
+          fieldCode: standardField.code
+        }, 'smart_mapper');
+        return standardField.id;
       }
     } catch (error) {
       await this.logService.log(userId, 'error', `Smart Field Mapper - Ошибка поиска стандартного поля ${fieldType}`, { 
