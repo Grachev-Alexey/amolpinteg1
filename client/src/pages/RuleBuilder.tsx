@@ -296,20 +296,74 @@ export default function RuleBuilder() {
         </div>
       )}
 
-      {/* Rules Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Список правил</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            data={rules}
-            columns={columns}
-            loading={rulesLoading}
-            emptyMessage="Нет созданных правил. Создайте первое правило."
-          />
-        </CardContent>
-      </Card>
+      {/* Rules Table - скрываем при создании/редактировании */}
+      {!showConstructor && !editingRule && (
+        <div className="space-y-6">
+          {/* Статистика правил */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Всего правил</p>
+                    <p className="text-2xl font-bold">{rules?.length || 0}</p>
+                  </div>
+                  <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Активных</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {rules?.filter(rule => rule.isActive).length || 0}
+                    </p>
+                  </div>
+                  <div className="w-8 h-8 bg-green-500/10 rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Неактивных</p>
+                    <p className="text-2xl font-bold text-gray-500">
+                      {rules?.filter(rule => !rule.isActive).length || 0}
+                    </p>
+                  </div>
+                  <div className="w-8 h-8 bg-gray-500/10 rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Список правил */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Список правил</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                data={rules}
+                columns={columns}
+                loading={rulesLoading}
+                emptyMessage="Нет созданных правил. Создайте первое правило."
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
