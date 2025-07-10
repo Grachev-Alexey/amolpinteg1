@@ -27,9 +27,6 @@ export class LogService {
       await this.storage.createSystemLog(logEntry);
       
       // Выводим в консоль только в режиме разработки
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[${level.toUpperCase()}] ${message}`, data ? JSON.stringify(data, null, 2) : '');
-      }
     } catch (error) {
       console.error('Ошибка при записи лога:', error);
     }

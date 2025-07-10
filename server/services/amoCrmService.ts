@@ -19,9 +19,7 @@ export class AmoCrmService {
 
       const url = `https://${baseUrl}/api/v4/leads/pipelines`;
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Testing AmoCRM connection:", { url, hasApiKey: !!apiKey });
-      }
+
 
       const response = await fetch(url, {
         headers: {
@@ -30,19 +28,11 @@ export class AmoCrmService {
         },
       });
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log("AmoCRM test response:", {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-        });
-      }
+
 
       if (!response.ok) {
         const errorText = await response.text();
-        if (process.env.NODE_ENV === 'development') {
-          console.log("AmoCRM test error response:", errorText);
-        }
+
       }
 
       return response.ok;

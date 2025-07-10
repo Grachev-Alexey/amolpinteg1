@@ -116,9 +116,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId;
       let { subdomain, apiKey } = req.body;
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Testing connection with provided data:', { subdomain, hasApiKey: !!apiKey });
-      }
       
       // Если API ключ пустой, пытаемся использовать сохраненный
       if (!apiKey) {
@@ -126,9 +123,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (settings && settings.apiKey) {
           apiKey = settings.apiKey;
           subdomain = settings.subdomain;
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Using saved API key for testing');
-          }
         }
       }
       
@@ -139,9 +133,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Проверяем подключение
       const testResult = await amoCrmService.testConnection(subdomain, apiKey);
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Connection test result:', { isValid: testResult });
-      }
       
       if (testResult) {
         res.json({ isValid: true });
