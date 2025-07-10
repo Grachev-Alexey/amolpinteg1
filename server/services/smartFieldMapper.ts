@@ -73,31 +73,7 @@ export class SmartFieldMapper {
     return result;
   }
 
-  /**
-   * Парсит старый формат маппирования (для обратной совместимости)
-   */
-  private parseOldFormatMapping(targetFieldId: string): any {
-    // Стандартные поля
-    const standardFields = {
-      'name': { entity: 'contact', field: 'name', type: 'standard' },
-      'phone': { entity: 'contact', field: 'phone', type: 'standard' },
-      'email': { entity: 'contact', field: 'email', type: 'standard' },
-      'first_name': { entity: 'contact', field: 'name', type: 'standard' },
-      'last_name': { entity: 'contact', field: 'name', type: 'standard' }
-    };
 
-    if (standardFields[targetFieldId]) {
-      return standardFields[targetFieldId];
-    }
-
-    // Если это числовой ID, предполагаем что это кастомное поле
-    if (/^\d+$/.test(targetFieldId)) {
-      // Без метаданных нельзя определить, поэтому возвращаем null
-      return null;
-    }
-
-    return null;
-  }
 
   /**
    * Применяет прямое маппирование поля (существующий формат)

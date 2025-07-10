@@ -468,6 +468,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Available fields for field mapping
+  app.get('/api/field-mapping/available-fields/:targetCrm', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { targetCrm } = req.params;
+      
+      if (targetCrm !== 'amocrm' && targetCrm !== 'lptracker') {
+        return res.status(400).json({ message: "Неподдерживаемая CRM система" });
+      }
+
+      // Используем SmartFieldMapper для получения доступных полей
+      const { SmartFieldMapper } = await import('./services/smartFieldMapper');
+      const smartFieldMapper = new SmartFieldMapper(storage);
+      
+      const availableFields = await smartFieldMapper.getAvailableFields(userId, targetCrm);
+      res.json(availableFields);
+    } catch (error) {
+      console.error("Error fetching available fields:", error);
+      res.status(500).json({ message: "Не удалось получить список доступных полей" });
+    }
+  });
+
   // Sync rules routes
   app.get('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {

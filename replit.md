@@ -27,6 +27,13 @@ Preferred communication style: Simple, everyday language.
 - ✓ Added API endpoint `/api/field-mapping/available-fields/:targetCrm` for dynamic field loading
 - ✓ System now supports mapping to: contact fields, lead fields, notes, tasks, and future entities
 
+### Code Quality and Architecture Cleanup (July 10, 2025)
+- ✓ Removed duplicate `parseOldFormatMapping` method from SmartFieldMapper
+- ✓ Removed duplicate `applyFieldMapping` and `getFieldValue` methods from WebhookService
+- ✓ Unified field mapping logic to use only SmartFieldMapper
+- ✓ Cleaned up redundant code to prevent conflicts and confusion
+- ✓ All field mapping now goes through the enhanced SmartFieldMapper system
+
 
 ## System Architecture
 

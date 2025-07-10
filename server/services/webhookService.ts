@@ -570,18 +570,15 @@ export class WebhookService {
             webhookDataBefore: webhookData
           }, 'webhook');
 
-          // Применяем маппинг полей если он настроен (старый способ)
-          const mappedWebhookData = this.applyFieldMapping(webhookData, action.fieldMappings || {}, eventData);
-          
           // Добавляем fieldMappings в данные для Smart Field Mapper
-          mappedWebhookData.fieldMappings = action.fieldMappings || {};
+          webhookData.fieldMappings = action.fieldMappings || {};
 
           switch (action.type) {
             case 'sync_to_amocrm':
-              await this.amoCrmService.syncToAmoCrm(eventData.userId, mappedWebhookData, action.searchBy || 'phone');
+              await this.amoCrmService.syncToAmoCrm(eventData.userId, webhookData, action.searchBy || 'phone');
               break;
             case 'sync_to_lptracker':
-              await this.lpTrackerService.syncToLpTracker(eventData.userId, mappedWebhookData, action.searchBy || 'phone');
+              await this.lpTrackerService.syncToLpTracker(eventData.userId, webhookData, action.searchBy || 'phone');
               break;
             default:
               await this.logService.log(eventData.userId, 'warning', `Неизвестный тип действия: ${action.type}`, { action }, 'webhook');
@@ -638,157 +635,5 @@ export class WebhookService {
     return phoneContact ? phoneContact.data : '';
   }
 
-  private applyFieldMapping(webhookData: any, fieldMappings: any, eventData: any): any {
-    // Создаем копию исходных данных
-    const mappedData = { ...webhookData };
 
-    // Если нет настроек маппинга, возвращаем исходные данные
-    if (!fieldMappings || Object.keys(fieldMappings).length === 0) {
-      return mappedData;
-    }
-
-    // Инициализируем объект для кастомных полей LPTracker
-    const lpTrackerCustomFields: any = {};
-
-    // Применяем маппинг полей
-    for (const [sourceField, targetField] of Object.entries(fieldMappings)) {
-      if (sourceField && targetField) {
-        // Получаем значение из исходных данных вебхука
-        const sourceValue = this.getFieldValue(sourceField, eventData);
-        
-        // Логируем попытку маппинга
-        this.logService.log(eventData.userId, 'info', `Попытка маппинга поля: ${sourceField} → ${targetField}`, { 
-          sourceField, 
-          targetField, 
-          sourceValue,
-          found: sourceValue !== undefined && sourceValue !== null && sourceValue !== ''
-        }, 'webhook');
-        
-        if (sourceValue !== undefined && sourceValue !== null && sourceValue !== '') {
-          // Проверяем, является ли целевое поле кастомным полем LPTracker (числовой ID)
-          if (/^\d+$/.test(targetField as string)) {
-            // Это кастомное поле LPTracker
-            lpTrackerCustomFields[targetField as string] = sourceValue;
-            
-            // Логируем примененное маппинг кастомного поля
-            this.logService.log(eventData.userId, 'info', `Применен маппинг кастомного поля LPTracker: ${sourceField} → ${targetField}`, { 
-              sourceField, 
-              targetField, 
-              sourceValue 
-            }, 'webhook');
-          } else {
-            // Это стандартное поле
-            mappedData[targetField as string] = sourceValue;
-            
-            // Логируем примененное маппинг стандартного поля
-            this.logService.log(eventData.userId, 'info', `Применен маппинг стандартного поля: ${sourceField} → ${targetField}`, { 
-              sourceField, 
-              targetField, 
-              sourceValue 
-            }, 'webhook');
-          }
-        } else {
-          // Логируем пропущенное маппинг
-          this.logService.log(eventData.userId, 'warning', `Маппинг поля пропущен - значение не найдено: ${sourceField}`, { 
-            sourceField, 
-            targetField,
-            eventDataKeys: Object.keys(eventData),
-            leadCustomFields: eventData.leadDetails?.custom_fields_values?.map((f: any) => ({ id: f.field_id, name: f.field_name, value: f.values?.[0]?.value })),
-            contactCustomFields: eventData.contactsDetails?.[0]?.custom_fields_values?.map((f: any) => ({ id: f.field_id, name: f.field_name, value: f.values?.[0]?.value }))
-          }, 'webhook');
-        }
-      }
-    }
-
-    // Добавляем кастомные поля LPTracker в mappedData
-    if (Object.keys(lpTrackerCustomFields).length > 0) {
-      mappedData.lptracker_custom_fields = lpTrackerCustomFields;
-      
-      this.logService.log(eventData.userId, 'info', `Добавлены кастомные поля LPTracker`, { 
-        lpTrackerCustomFields
-      }, 'webhook');
-    }
-
-    return mappedData;
-  }
-
-  private getFieldValue(fieldPath: string, eventData: any): any {
-    try {
-      // Обработка стандартных полей
-      const standardFields: { [key: string]: (data: any) => any } = {
-        'name': (data) => data.leadDetails?.name || data.contactsDetails?.[0]?.name || '',
-        'first_name': (data) => data.contactsDetails?.[0]?.first_name || '',
-        'last_name': (data) => data.contactsDetails?.[0]?.last_name || '',
-        'phone': (data) => this.extractPhoneFromContact(data.contactsDetails?.[0]) || '',
-        'email': (data) => this.extractEmailFromContact(data.contactsDetails?.[0]) || '',
-        'deal_name': (data) => data.leadDetails?.name || '',
-        'price': (data) => data.leadDetails?.price || 0,
-        'pipeline_id': (data) => data.leadDetails?.pipeline_id || '',
-        'status_id': (data) => data.leadDetails?.status_id || ''
-      };
-
-      // Если это стандартное поле, используем функцию извлечения
-      if (standardFields[fieldPath]) {
-        return standardFields[fieldPath](eventData);
-      }
-
-      // Если это кастомное поле, ищем в custom_fields_values
-      if (fieldPath.startsWith('custom_field_')) {
-        const fieldId = fieldPath.replace('custom_field_', '');
-        const customField = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
-        return customField?.values?.[0]?.value || '';
-      }
-
-      // Если это поле контакта, ищем в custom_fields_values контакта
-      if (fieldPath.startsWith('contact_field_')) {
-        const fieldId = fieldPath.replace('contact_field_', '');
-        const contactField = eventData.contactsDetails?.[0]?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
-        return contactField?.values?.[0]?.value || '';
-      }
-
-      // ВАЖНО: Если fieldPath это просто число или строка-число, то это ID кастомного поля
-      if (/^\d+$/.test(fieldPath)) {
-        const fieldId = fieldPath;
-        
-        // Проверяем структуру данных LPTracker
-        if (eventData.contact?.fields) {
-          const lpTrackerField = eventData.contact.fields.find((f: any) => f.id == fieldId);
-          if (lpTrackerField) {
-            return lpTrackerField.value || '';
-          }
-        }
-        
-        // Проверяем структуру данных AmoCRM (leadDetails)
-        const leadCustomField = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
-        if (leadCustomField) {
-          return leadCustomField.values?.[0]?.value || '';
-        }
-        
-        // Проверяем структуру данных AmoCRM (contactsDetails)
-        const contactCustomField = eventData.contactsDetails?.[0]?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
-        if (contactCustomField) {
-          return contactCustomField.values?.[0]?.value || '';
-        }
-        
-        return '';
-      }
-
-      // Прямое обращение к полю
-      const pathParts = fieldPath.split('.');
-      let value = eventData;
-      
-      for (const part of pathParts) {
-        if (value && typeof value === 'object' && part in value) {
-          value = value[part];
-        } else {
-          return undefined;
-        }
-      }
-      
-      return value;
-    } catch (error) {
-      console.error('Ошибка получения значения поля:', error);
-      return undefined;
-    }
-  }
 }
