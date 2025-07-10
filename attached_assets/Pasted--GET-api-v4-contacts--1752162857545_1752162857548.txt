@@ -1,0 +1,145 @@
+Список контактов
+Метод
+GET /api/v4/contacts
+
+Описание
+Метод позволяет получить список контактов в аккаунте.
+
+Ограничения
+Метод доступен в соответствии с правами пользователя.
+
+GET параметры
+Параметр	Тип данных	Описание
+with	string	Данный параметр принимает строку, в том числе из нескольких значений, указанных через запятую. Данный метод поддерживает следующие параметры.
+page	int	Страница выборки
+limit	int	Количество возвращаемых сущностей за один запрос (Максимум – 250)
+query	string
+int	Поисковый запрос (Осуществляет поиск по заполненным полям сущности)
+filter	object	Фильтр. Подробней про фильтры читайте в отдельной статье
+order	object	Сортировка результатов списка.
+Доступные поля для сортировки: updated_at, id.
+Доступные значения для сортировки: asc, desc.
+Пример: /api/v4/contacts?order[updated_at]=asc
+Заголовок типа данных при успешном результате
+Content-Type: application/hal+json
+
+Заголовок типа данных при ошибке
+Content-Type: application/problem+json
+
+HTTP коды ответа
+Код ответа	Условие
+200	Запрос выполнен успешно
+401	Пользователь не авторизован
+402	Аккаунт не оплачен
+Параметры ответа
+Метод возвращает коллекцию моделей контактов, рассмотрим ниже свойства контакта.
+
+Параметр	Тип данных	Описание
+id	int	ID контакта
+name	string	Название контакта
+first_name	string	Имя контакта
+last_name	string	Фамилия контакта
+responsible_user_id	int	ID пользователя, ответственного за контакт
+group_id	int	ID группы, в которой состоит ответственны пользователь за контакт
+created_by	int	ID пользователя, создавший контакт
+updated_by	int	ID пользователя, изменивший контакт
+created_at	int	Дата создания контакта, передается в Unix Timestamp
+updated_at	int	Дата изменения контакта, передается в Unix Timestamp
+is_deleted	bool	Удален ли элемент
+closest_task_at	int	Дата ближайшей задачи к выполнению, передается в Unix Timestamp
+custom_fields_values	array
+null	Массив, содержащий информацию по значениям дополнительных полей, заданных для данного контакта
+account_id	int	ID аккаунта, в котором находится контакт
+_embedded	object	Данные вложенных сущностей
+_embedded[tags]	array	Данные тегов, привязанных к контакту
+_embedded[tags][0]	object	Модель тега, привязанного к контакту
+_embedded[tags][0][id]	int	ID тега
+_embedded[tags][0][name]	string	Название тега
+_embedded[tags][0][color]	null	Цвет тега, доступен только для сделок
+_embedded[companies]	array	Данные компании, привязанной к контакту. В массиве всегда 1 объект
+_embedded[companies][0]	object	Данные компании
+_embedded[companies][0][id]	int	ID компании, привязанной к контакту
+_embedded[customers]	array	Требуется GET параметр with. Данные покупателей, привязанных к контакту
+_embedded[customers][0]	object	Данные покупателя
+_embedded[customers][0][id]	int	ID покупателя
+_embedded[leads]	array	Требуется GET параметр with. Данные сделок, привязанных к контакту
+_embedded[leads][0]	object	Данные сделки
+_embedded[leads][0][id]	int	ID сделки
+_embedded[catalog_elements]	array	Требуется GET параметр with. Данные элементов списков, привязанных к контакту
+_embedded[catalog_elements][0]	object	Данные элемента списка, привязанного к контакту
+_embedded[catalog_elements][0][id]	int	ID элемента, привязанного к контакту
+_embedded[catalog_elements][0][metadata]	object	Мета-данные элемента
+_embedded[catalog_elements][0][quantity]	int
+float	Количество элементов у контакта
+_embedded[catalog_elements][0][catalog_id]	int	ID списка, в котором находится элемент
+_embedded[catalog_elements][0][price_id]	int	ID поля типа Цена, которое установлено для привязанного элемента в сущности
+Пример ответа
+{
+    "_page": 1,
+    "_links": {
+        "self": {
+            "href": "https://example.amocrm.ru/api/v4/contacts?limit=2&page=1"
+        },
+        "next": {
+            "href": "https://example.amocrm.ru/api/v4/contacts?limit=2&page=2"
+        }
+    },
+    "_embedded": {
+        "contacts": [
+            {
+                "id": 7143599,
+                "name": "1",
+                "first_name": "",
+                "last_name": "",
+                "responsible_user_id": 504141,
+                "group_id": 0,
+                "created_by": 504141,
+                "updated_by": 504141,
+                "created_at": 1585758065,
+                "updated_at": 1585758065,
+                "closest_task_at": null,
+                "custom_fields_values": null,
+                "account_id": 28805383,
+                "_links": {
+                    "self": {
+                        "href": "https://example.amocrm.ru/api/v4/contacts/7143599"
+                    }
+                },
+                "_embedded": {
+                    "tags": [],
+                    "companies": []
+                }
+            },
+            {
+                "id": 7767065,
+                "name": "dsgdsg",
+                "first_name": "",
+                "last_name": "",
+                "responsible_user_id": 504141,
+                "group_id": 0,
+                "created_by": 504141,
+                "updated_by": 504141,
+                "created_at": 1586359590,
+                "updated_at": 1586359590,
+                "closest_task_at": null,
+                "custom_fields_values": null,
+                "account_id": 28805383,
+                "_links": {
+                    "self": {
+                        "href": "https://example.amocrm.ru/api/v4/contacts/7767065"
+                    }
+                },
+                "_embedded": {
+                    "tags": [],
+                    "companies": []
+                }
+            }
+        ]
+    }
+}
+
+Параметры для GET-параметра with
+Параметр	Описание
+catalog_elements	Добавляет в ответ связанные с контактами элементы списков
+leads	Добавляет в ответ связанные с контактами сделки
+customers	Добавляет в ответ связанных с контактами покупателей

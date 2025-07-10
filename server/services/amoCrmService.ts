@@ -224,11 +224,11 @@ export class AmoCrmService {
 
       await this.logService.log(userId, 'info', 'Starting AmoCRM sync', { webhookData, searchBy, userId }, 'amocrm');
 
-      // 1. Найти или создать контакт
+      // 1. Найти или создать контакт (с включенными сделками)
       const contact = await this.findOrCreateContact(userId, baseUrl, apiKey, webhookData, searchBy);
       
-      // 2. Найти или создать сделку для контакта
-      const deal = await this.findOrCreateDeal(userId, baseUrl, apiKey, contact.id, webhookData);
+      // 2. Найти или создать сделку для контакта (используя данные из контакта)
+      const deal = await this.findOrCreateDeal(userId, baseUrl, apiKey, contact.id, webhookData, contact._embedded?.leads);
 
       await this.logService.log(userId, 'info', 'AmoCRM sync completed', { 
         contact: { id: contact.id, name: contact.name },
@@ -263,7 +263,7 @@ export class AmoCrmService {
       }
 
       if (searchValue) {
-        const searchResponse = await fetch(`${baseUrl}/contacts?query=${encodeURIComponent(searchValue)}`, {
+        const searchResponse = await fetch(`${baseUrl}/contacts?query=${encodeURIComponent(searchValue)}&with=leads`, {
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
@@ -274,7 +274,10 @@ export class AmoCrmService {
           const searchResult = await searchResponse.json();
           if (searchResult._embedded && searchResult._embedded.contacts && searchResult._embedded.contacts.length > 0) {
             const existingContact = searchResult._embedded.contacts[0];
-            await this.logService.log(userId, 'info', 'Found existing contact', { contactId: existingContact.id }, 'amocrm');
+            await this.logService.log(userId, 'info', 'Found existing contact with leads', { 
+              contactId: existingContact.id, 
+              leadsCount: existingContact._embedded?.leads?.length || 0 
+            }, 'amocrm');
             return existingContact;
           }
         }
@@ -340,45 +343,35 @@ export class AmoCrmService {
     }
   }
 
-  private async findOrCreateDeal(userId: string, baseUrl: string, apiKey: string, contactId: number, webhookData: any): Promise<any> {
+  private async findOrCreateDeal(userId: string, baseUrl: string, apiKey: string, contactId: number, webhookData: any, existingLeads?: any[]): Promise<any> {
     try {
-      // Поиск существующих сделок для контакта
-      const searchResponse = await fetch(`${baseUrl}/leads?filter[contacts][0]=${contactId}`, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-      });
+      // Сначала проверяем сделки, полученные вместе с контактом
+      if (existingLeads && existingLeads.length > 0) {
+        const existingDeal = existingLeads[0];
+        await this.logService.log(userId, 'info', 'Found existing deal from contact data', { dealId: existingDeal.id }, 'amocrm');
+        
+        // Обновляем существующую сделку
+        const updateData = {
+          id: existingDeal.id,
+          name: webhookData.deal_name || existingDeal.name,
+          price: webhookData.price || existingDeal.price,
+        };
 
-      if (searchResponse.ok) {
-        const searchResult = await searchResponse.json();
-        if (searchResult._embedded && searchResult._embedded.leads && searchResult._embedded.leads.length > 0) {
-          const existingDeal = searchResult._embedded.leads[0];
-          await this.logService.log(userId, 'info', 'Found existing deal', { dealId: existingDeal.id }, 'amocrm');
-          
-          // Обновляем существующую сделку
-          const updateData = {
-            id: existingDeal.id,
-            name: webhookData.deal_name || existingDeal.name,
-            price: webhookData.price || existingDeal.price,
-          };
+        const updateResponse = await fetch(`${baseUrl}/leads`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify([updateData]),
+        });
 
-          const updateResponse = await fetch(`${baseUrl}/leads`, {
-            method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify([updateData]),
-          });
-
-          if (updateResponse.ok) {
-            const updateResult = await updateResponse.json();
-            return updateResult._embedded.leads[0];
-          }
-          
-          return existingDeal;
+        if (updateResponse.ok) {
+          const updateResult = await updateResponse.json();
+          return updateResult._embedded.leads[0];
         }
+        
+        return existingDeal;
       }
 
       // Создание новой сделки

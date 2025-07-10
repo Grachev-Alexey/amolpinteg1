@@ -9,6 +9,13 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+- **July 10, 2025**: Migrated project from Replit Agent to standard Replit environment
+- **Optimization**: Updated AmoCRM service to use `with=leads` parameter when searching contacts, reducing API calls
+- **Database**: PostgreSQL database provisioned and migrations applied
+- **Performance**: Eliminated separate API requests for deal retrieval when contact already includes lead data
+
 
 ## System Architecture
 
