@@ -344,6 +344,7 @@ export default function RuleConstructor({
 
   // Обновляем маппинг полей для действия
   const updateActionFieldMappings = (actionId: string, mappings: Array<{id: string, sourceField: string, targetField: string}>) => {
+    console.log('updateActionFieldMappings called:', { actionId, mappings });
     setRule({
       ...rule,
       actions: {
@@ -352,8 +353,9 @@ export default function RuleConstructor({
           a.id === actionId ? { 
             ...a, 
             fieldMappings: mappings.reduce((acc, mapping) => {
-              if (mapping.sourceField && mapping.targetField) {
-                acc[mapping.sourceField] = mapping.targetField;
+              // Сохраняем все маппинги, даже неполные, для корректного состояния
+              if (mapping.sourceField || mapping.targetField) {
+                acc[mapping.sourceField || `temp_${mapping.id}`] = mapping.targetField;
               }
               return acc;
             }, {} as any)
@@ -665,7 +667,7 @@ export default function RuleConstructor({
                           const fieldMappings = action.fieldMappings || {};
                           return Object.entries(fieldMappings).map(([sourceField, targetField], index) => ({
                             id: `mapping_${index}_${sourceField}`,
-                            sourceField,
+                            sourceField: sourceField.startsWith('temp_') ? '' : sourceField,
                             targetField: targetField as string
                           }));
                         })()}
