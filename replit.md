@@ -6,7 +6,7 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 ## Recent Changes
 
-**July 10, 2025 - Admin Integration Monitoring System Complete**
+**July 10, 2025 - Admin Integration Monitoring & Authentication Fix Complete**
 - ✓ Created comprehensive admin integration monitoring page with detailed status tracking
 - ✓ Added API endpoints for webhook status monitoring and user integration testing
 - ✓ Implemented real-time status checking for AmoCRM and LPTracker integrations per user
@@ -15,6 +15,8 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 - ✓ Fixed LPTracker API endpoints to use correct documentation (contact fields, custom fields, webhook setup)
 - ✓ Enhanced integration-status endpoint to provide detailed user-specific information
 - ✓ Added navigation item "Интеграции" in admin sidebar for easy access to monitoring tools
+- ✓ Fixed authentication redirect issue - now unauthenticated users are redirected to login instead of 404
+- ✓ Resolved 404 error appearing on all pages by fixing route structure
 
 **July 10, 2025 - Migration to Replit Environment Complete**
 - ✓ Successfully migrated from Replit Agent to standard Replit environment

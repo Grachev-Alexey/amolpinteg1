@@ -68,7 +68,6 @@ function Router() {
           <Route path="/admin/settings" component={SystemSettings} />
           <Route path="/admin/logs" component={Logs} />
           <Route path="/admin/monitoring" component={AdminMonitoring} />
-          <Route component={NotFound} />
         </AdminLayout>
       ) : (
         <Layout>
@@ -78,9 +77,9 @@ function Router() {
           <Route path="/upload" component={FileUpload} />
           <Route path="/results" component={CallResults} />
           <Route path="/logs" component={Logs} />
-          <Route component={NotFound} />
         </Layout>
       )}
+      <Route component={NotFound} />
     </Switch>
   );
 }
