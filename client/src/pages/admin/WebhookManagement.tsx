@@ -27,11 +27,9 @@ export default function WebhookManagement() {
 
   // Get detailed webhook status
   const { data: webhookStatus, isLoading: webhookLoading } = useQuery({
-    queryKey: ["/api/admin/webhook-status", Date.now()],
+    queryKey: ["/api/admin/webhook-status"],
     queryFn: getQueryFn({ on401: "throw" }),
-    refetchInterval: 3000,
-    staleTime: 0,
-    gcTime: 0,
+    refetchInterval: 5000,
   });
 
   // Get global webhook status
@@ -174,8 +172,6 @@ export default function WebhookManagement() {
                 (w: any) => w.userId === user.userId
               );
               const isWebhookActive = userWebhook?.webhookActive || false;
-              
-              console.log('[TEMP DEBUG Frontend] User:', user.username, 'userWebhook:', userWebhook, 'isWebhookActive:', isWebhookActive);
 
               return (
                 <Card key={user.userId}>
