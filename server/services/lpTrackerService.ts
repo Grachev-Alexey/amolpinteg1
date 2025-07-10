@@ -65,6 +65,13 @@ export class LpTrackerService {
         fields: {}
       };
 
+      await this.logService.log(userId, 'info', 'LPTracker - Данные для создания контакта', { 
+        webhookDataName: webhookData.name,
+        webhookDataFirstName: webhookData.first_name,
+        contactDataName: contactData.name,
+        allWebhookData: webhookData
+      }, 'lptracker');
+
       // Добавляем контактные данные
       if (webhookData.phone) {
         contactData.details.push({
