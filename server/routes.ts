@@ -374,6 +374,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // LPTracker webhook management routes
+  app.get('/api/lptracker/webhook-status', requireSuperuser, async (req: any, res) => {
+    try {
+      const webhookStatus = await lpTrackerService.getWebhookStatus();
+      res.json(webhookStatus);
+    } catch (error) {
+      console.error("Error getting LPTracker webhook status:", error);
+      res.status(500).json({ message: "Не удалось получить статус вебхука" });
+    }
+  });
+
+  app.post('/api/lptracker/webhook', requireSuperuser, async (req: any, res) => {
+    try {
+      const { webhookUrl } = req.body;
+      if (!webhookUrl) {
+        return res.status(400).json({ message: "URL вебхука обязателен" });
+      }
+      
+      const success = await lpTrackerService.setupWebhook(webhookUrl);
+      if (success) {
+        res.json({ message: "Вебхук успешно установлен" });
+      } else {
+        res.status(500).json({ message: "Не удалось установить вебхук" });
+      }
+    } catch (error) {
+      console.error("Error setting up LPTracker webhook:", error);
+      res.status(500).json({ message: "Не удалось установить вебхук" });
+    }
+  });
+
+  app.delete('/api/lptracker/webhook', requireSuperuser, async (req: any, res) => {
+    try {
+      const success = await lpTrackerService.removeWebhook();
+      if (success) {
+        res.json({ message: "Вебхук успешно удален" });
+      } else {
+        res.status(500).json({ message: "Не удалось удалить вебхук" });
+      }
+    } catch (error) {
+      console.error("Error removing LPTracker webhook:", error);
+      res.status(500).json({ message: "Не удалось удалить вебхук" });
+    }
+  });
+
   // Sync rules routes
   app.get('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {
@@ -593,7 +637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const globalSettings = await storage.getLpTrackerGlobalSettings();
           if (globalSettings?.login && globalSettings?.password && globalSettings?.isActive) {
             lpTrackerStatus = 'configured';
-            webhookStatus = 'configured'; // Assume webhook is configured if LPTracker is set up
+            webhookStatus = globalSettings?.webhookActive ? 'active' : 'inactive';
           }
         }
 
@@ -624,12 +668,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         new Date(log.createdAt) >= today
       ).length;
 
+      // Get global LPTracker webhook status
+      const globalSettings = await storage.getLpTrackerGlobalSettings();
+      const lpTrackerWebhook = {
+        url: globalSettings?.webhookUrl || null,
+        active: globalSettings?.webhookActive || false,
+        configured: !!globalSettings?.webhookUrl
+      };
+
       res.json({
         amoCrmActive,
         lpTrackerActive,
         webhooksProcessed,
         totalUsers: allUsers.length,
-        userIntegrations
+        userIntegrations,
+        lpTrackerWebhook
       });
     } catch (error) {
       console.error("Error fetching integration status:", error);

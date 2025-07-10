@@ -21,6 +21,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useAuthRedirect } from "@/lib/authRedirect";
+import WebhookManager from "@/components/WebhookManager";
 
 export default function AdminMonitoring() {
   useAuthRedirect();
@@ -220,6 +221,21 @@ export default function AdminMonitoring() {
             <Separator />
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${integrationStatus?.lpTrackerWebhook?.active ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span>LPTracker Webhook</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">
+                  {integrationStatus?.lpTrackerWebhook?.configured ? 'Настроен' : 'Не настроен'}
+                </span>
+                <Badge variant={integrationStatus?.lpTrackerWebhook?.active ? "default" : "secondary"}>
+                  {integrationStatus?.lpTrackerWebhook?.active ? 'Активен' : 'Неактивен'}
+                </Badge>
+              </div>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 <span>Webhook обработка</span>
               </div>
@@ -235,6 +251,9 @@ export default function AdminMonitoring() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Webhook Management */}
+      <WebhookManager />
 
       {/* Recent Activity */}
       <Card>

@@ -56,6 +56,8 @@ export const lpTrackerGlobalSettings = pgTable("lptracker_global_settings", {
   service: varchar("service").default("CRM Integration").notNull(), // Service name for logging
   address: varchar("address").default("direct.lptracker.ru").notNull(), // API server address
   token: text("token"), // Authentication token from LPTracker
+  webhookUrl: text("webhook_url"), // Webhook URL set in LPTracker
+  webhookActive: boolean("webhook_active").default(false), // Whether webhook is active
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
