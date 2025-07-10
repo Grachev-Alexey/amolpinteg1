@@ -49,7 +49,6 @@ export default function RuleConstructor({
       ];
     } else if (rule.webhookSource === 'lptracker') {
       return [
-        { value: "pipeline", label: "Проект" },
         { value: "status", label: "Статус лида" },
         { value: "field_equals", label: "Поле равно" },
         { value: "field_contains", label: "Поле содержит" },
@@ -366,11 +365,7 @@ export default function RuleConstructor({
                     </div>
                   )}
 
-                  {condition.type === "pipeline" && rule.webhookSource === 'lptracker' && (
-                    <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded">
-                      LPTracker не использует воронки. Используйте "Статус лида" для проверки этапов воронки.
-                    </div>
-                  )}
+
                   
                   {condition.type === "status" && (
                     <div className="flex items-center space-x-2">
