@@ -222,7 +222,7 @@ export class AmoCrmService {
       }
       const baseUrl = `https://${normalizedSubdomain}/api/v4`;
 
-      await this.logService.log(userId, 'info', 'Starting AmoCRM sync', { webhookData, searchBy }, 'amocrm');
+      await this.logService.log(userId, 'info', 'Starting AmoCRM sync', { webhookData, searchBy, userId }, 'amocrm');
 
       // 1. Найти или создать контакт
       const contact = await this.findOrCreateContact(userId, baseUrl, apiKey, webhookData, searchBy);
@@ -237,7 +237,15 @@ export class AmoCrmService {
 
       return { contact, deal };
     } catch (error) {
-      await this.logService.log(userId, 'error', 'AmoCRM sync failed', { error: error.message }, 'amocrm');
+      await this.logService.log(userId, 'error', 'AmoCRM sync failed', { 
+        error: error.message,
+        stack: error.stack,
+        webhookData: {
+          name: webhookData.name,
+          phone: webhookData.phone,
+          email: webhookData.email
+        }
+      }, 'amocrm');
       throw error;
     }
   }

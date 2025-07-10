@@ -189,7 +189,7 @@ export class WebhookService {
             }, 'webhook');
 
             // Выполняем действия правила
-            await this.executeActions(rule.actions, webhookData);
+            await this.executeActions(rule.actions, { ...webhookData, userId });
             
             // Увеличиваем счетчик выполнений правила
             await this.storage.incrementRuleExecution(rule.id);
@@ -542,16 +542,16 @@ export class WebhookService {
 
       for (const action of actions.list) {
         try {
-          await this.logService.log(eventData.userId, 'info', `Выполняется действие: ${action.type}`, { action }, 'webhook');
+          await this.logService.log(eventData.userId, 'info', `Выполняется действие: ${action.type}`, { action, eventDataUserId: eventData.userId }, 'webhook');
 
           // Подготавливаем данные для синхронизации из различных источников
           const webhookData = {
-            name: eventData.contactsDetails?.[0]?.name || eventData.callData?.contact_name || eventData.leadDetails?.name || 'Новый контакт',
+            name: eventData.contact?.name || eventData.contactsDetails?.[0]?.name || eventData.callData?.contact_name || eventData.leadDetails?.name || 'Новый контакт',
             first_name: eventData.contactsDetails?.[0]?.first_name || eventData.callData?.contact_name || '',
             last_name: eventData.contactsDetails?.[0]?.last_name || '',
-            phone: this.extractPhoneFromContact(eventData.contactsDetails?.[0]) || eventData.callData?.phone || '',
+            phone: this.extractPhoneFromLpTrackerContact(eventData.contact) || this.extractPhoneFromContact(eventData.contactsDetails?.[0]) || eventData.callData?.phone || '',
             email: this.extractEmailFromContact(eventData.contactsDetails?.[0]) || eventData.callData?.email || '',
-            deal_name: eventData.leadDetails?.name || 'Новая сделка',
+            deal_name: eventData.leadDetails?.name || eventData.name || 'Новая сделка',
             price: eventData.leadDetails?.price || 0,
             custom_fields: eventData.leadDetails?.custom_fields_values || {},
             source: 'webhook_automation',
@@ -573,7 +573,15 @@ export class WebhookService {
               await this.logService.log(eventData.userId, 'warning', `Неизвестный тип действия: ${action.type}`, { action }, 'webhook');
           }
         } catch (error) {
-          await this.logService.log(eventData.userId, 'error', `Ошибка выполнения действия: ${action.type}`, { error, action }, 'webhook');
+          await this.logService.log(eventData.userId, 'error', `Ошибка выполнения действия: ${action.type}`, { 
+            error: {
+              message: error.message,
+              stack: error.stack,
+              name: error.name
+            }, 
+            action,
+            eventDataKeys: Object.keys(eventData)
+          }, 'webhook');
         }
       }
     } catch (error) {
@@ -607,6 +615,13 @@ export class WebhookService {
     }
     
     return '';
+  }
+
+  private extractPhoneFromLpTrackerContact(contact: any): string {
+    if (!contact || !contact.contacts) return '';
+    
+    const phoneContact = contact.contacts.find((c: any) => c.type === 'phone');
+    return phoneContact ? phoneContact.data : '';
   }
 
   private applyFieldMapping(webhookData: any, fieldMappings: any, eventData: any): any {
