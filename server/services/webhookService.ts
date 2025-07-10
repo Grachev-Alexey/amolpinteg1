@@ -83,8 +83,29 @@ export class WebhookService {
           originalPayload: payload
         }, 'webhook');
 
+        // Получаем детали всех связанных контактов
+        let contactsDetails = [];
+        if (leadDetails._embedded?.contacts && leadDetails._embedded.contacts.length > 0) {
+          for (const contact of leadDetails._embedded.contacts) {
+            try {
+              const contactDetails = await this.getContactDetails(userId, contact.id);
+              contactsDetails.push(contactDetails);
+              
+              await this.logService.log(userId, 'info', `AmoCRM - Получена информация о контакте ${contact.id}`, { 
+                contactDetails,
+                isMainContact: contact.is_main,
+                leadId
+              }, 'webhook');
+            } catch (error) {
+              await this.logService.log(userId, 'warning', `AmoCRM - Не удалось получить данные контакта ${contact.id}`, { 
+                error, contactId: contact.id, leadId 
+              }, 'webhook');
+            }
+          }
+        }
+
         // Проверяем правила пользователя и выполняем подходящие действия
-        await this.processLeadRules(userId, leadId, leadDetails, payload);
+        await this.processLeadRules(userId, leadId, leadDetails, contactsDetails, payload);
 
       } catch (error) {
         await this.logService.log(userId, 'error', `Ошибка получения данных сделки ${leadId}`, { 
@@ -193,8 +214,37 @@ export class WebhookService {
     }
   }
 
+  // Получение детальной информации о контакте через AmoCRM API
+  private async getContactDetails(userId: string, contactId: string): Promise<any> {
+    try {
+      const amoCrmSettings = await this.storage.getAmoCrmSettings(userId);
+      if (!amoCrmSettings?.subdomain || !amoCrmSettings?.apiKey) {
+        throw new Error('AmoCRM настройки не найдены');
+      }
+
+      const url = `https://${amoCrmSettings.subdomain}.amocrm.ru/api/v4/contacts/${contactId}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${amoCrmSettings.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`AmoCRM Contact API error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching contact details:', error);
+      throw error;
+    }
+  }
+
   // Главный метод обработки правил для сделки
-  private async processLeadRules(userId: string, leadId: string, leadDetails: any, originalPayload: any): Promise<void> {
+  private async processLeadRules(userId: string, leadId: string, leadDetails: any, contactsDetails: any[], originalPayload: any): Promise<void> {
     try {
       // Получаем правила пользователя
       const rules = await this.storage.getSyncRules(userId);
@@ -212,6 +262,7 @@ export class WebhookService {
           const eventData = {
             leadId,
             leadDetails,
+            contactsDetails,
             webhookPayload: originalPayload,
             userId
           };
