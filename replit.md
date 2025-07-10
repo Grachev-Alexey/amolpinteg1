@@ -4,9 +4,20 @@
 
 This is a comprehensive CRM integration system designed to connect AmoCRM and LPTracker, providing automated synchronization, webhook processing, and data management capabilities. The application features a multi-user architecture with authentication, rule-based integration logic, and comprehensive logging.
 
+Successfully migrated to Replit environment on 2025-01-10 with full database setup and working authentication system.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Recent Changes
+
+- **2025-01-10**: Migrated from Replit Agent to Replit environment
+  - Created missing debugRoutes.ts file for development endpoints
+  - Set up PostgreSQL database with proper connection and migrations
+  - Fixed AmoCRM test connection logic to handle unsaved settings properly
+  - Application now runs successfully on port 5000
+  - Admin user system active (admin/admin123)
 
 ## System Architecture
 

@@ -138,12 +138,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Проверяем подключение
       const testResult = await amoCrmService.testConnection(subdomain, apiKey);
       
-      // Обновляем статус подключения в настройках
+      // Обновляем статус подключения в настройках только если они уже существуют
+      const existingSettings = await storage.getAmoCrmSettings(userId);
+      if (existingSettings) {
+        await storage.updateAmoCrmSettings(userId, { isActive: testResult });
+      }
+      
       if (testResult) {
-        await storage.updateAmoCrmSettings(userId, { isActive: true });
         res.json({ isValid: true });
       } else {
-        await storage.updateAmoCrmSettings(userId, { isActive: false });
         res.json({ 
           isValid: false, 
           message: "API ключ недействителен или истек. Проверьте правильность данных." 
