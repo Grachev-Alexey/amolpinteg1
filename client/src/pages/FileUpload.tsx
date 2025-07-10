@@ -5,19 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useAuthRedirect } from "@/lib/auth";
+import {
+  useAuthRedirect,
+  isUnauthorizedError,
+  handleUnauthorizedError,
+} from "@/lib/auth";
 
 import { apiRequest } from "@/lib/queryClient";
 import DataTable from "@/components/DataTable";
-import { 
-  Upload, 
-  File, 
-  X, 
-  Download, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  Upload,
+  File,
+  X,
+  Download,
+  AlertCircle,
+  CheckCircle,
   Clock,
-  FileText
+  FileText,
 } from "lucide-react";
 
 export default function FileUpload() {
@@ -30,7 +34,7 @@ export default function FileUpload() {
 
   // Fetch uploads
   const { data: uploads = [], isLoading: uploadsLoading } = useQuery({
-    queryKey: ['/api/file-uploads'],
+    queryKey: ["/api/file-uploads"],
     retry: false,
   });
 
@@ -38,12 +42,12 @@ export default function FileUpload() {
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await fetch('/api/file-uploads', {
-        method: 'POST',
+      formData.append("file", file);
+
+      const response = await fetch("/api/file-uploads", {
+        method: "POST",
         body: formData,
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -57,7 +61,7 @@ export default function FileUpload() {
         title: "Файл загружен",
         description: "Файл успешно загружен и поставлен в очередь на обработку",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/file-uploads'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/file-uploads"] });
       setSelectedFiles([]);
     },
     onError: (error) => {
@@ -83,15 +87,17 @@ export default function FileUpload() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
-    const validFiles = files.filter(file => 
-      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      file.type === 'text/csv' ||
-      file.name.endsWith('.xlsx') ||
-      file.name.endsWith('.csv')
+    const validFiles = files.filter(
+      (file) =>
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "text/csv" ||
+        file.name.endsWith(".xlsx") ||
+        file.name.endsWith(".csv"),
     );
-    
+
     if (validFiles.length !== files.length) {
       toast({
         title: "Недопустимые файлы",
@@ -99,7 +105,7 @@ export default function FileUpload() {
         variant: "destructive",
       });
     }
-    
+
     setSelectedFiles(validFiles);
   };
 
@@ -111,30 +117,30 @@ export default function FileUpload() {
   };
 
   const handleUpload = () => {
-    selectedFiles.forEach(file => {
+    selectedFiles.forEach((file) => {
       uploadMutation.mutate(file);
     });
   };
 
   const removeFile = (index: number) => {
-    setSelectedFiles(files => files.filter((_, i) => i !== index));
+    setSelectedFiles((files) => files.filter((_, i) => i !== index));
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
+      case "completed":
         return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'failed':
+      case "failed":
         return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case 'processing':
+      case "processing":
         return <Clock className="w-4 h-4 text-yellow-500" />;
       default:
         return <Clock className="w-4 h-4 text-gray-500" />;
@@ -151,12 +157,12 @@ export default function FileUpload() {
           <FileText className="w-4 h-4 text-muted-foreground" />
           <span className="font-medium">{value}</span>
         </div>
-      )
+      ),
     },
     {
       key: "size",
       label: "Размер",
-      render: (value: number) => formatFileSize(value)
+      render: (value: number) => formatFileSize(value),
     },
     {
       key: "status",
@@ -164,18 +170,25 @@ export default function FileUpload() {
       render: (value: string, row: any) => (
         <div className="flex items-center space-x-2">
           {getStatusIcon(value)}
-          <span className={`status-indicator ${
-            value === 'completed' ? 'status-connected' :
-            value === 'failed' ? 'status-disconnected' :
-            'status-pending'
-          }`}>
-            {value === 'completed' ? 'Завершено' :
-             value === 'failed' ? 'Ошибка' :
-             value === 'processing' ? 'Обработка' :
-             'Ожидает'}
+          <span
+            className={`status-indicator ${
+              value === "completed"
+                ? "status-connected"
+                : value === "failed"
+                  ? "status-disconnected"
+                  : "status-pending"
+            }`}
+          >
+            {value === "completed"
+              ? "Завершено"
+              : value === "failed"
+                ? "Ошибка"
+                : value === "processing"
+                  ? "Обработка"
+                  : "Ожидает"}
           </span>
         </div>
-      )
+      ),
     },
     {
       key: "processedRecords",
@@ -186,25 +199,25 @@ export default function FileUpload() {
             {value || 0} / {row.totalRecords || 0}
           </div>
           {row.totalRecords > 0 && (
-            <Progress 
-              value={((value || 0) / row.totalRecords) * 100} 
+            <Progress
+              value={((value || 0) / row.totalRecords) * 100}
               className="h-2 w-24"
             />
           )}
         </div>
-      )
+      ),
     },
     {
       key: "createdAt",
       label: "Дата загрузки",
-      sortable: true
+      sortable: true,
     },
     {
       key: "actions_column",
       label: "Действия",
       render: (value: any, row: any) => (
         <div className="flex items-center space-x-2">
-          {row.status === 'completed' && (
+          {row.status === "completed" && (
             <Button
               variant="ghost"
               size="sm"
@@ -213,26 +226,28 @@ export default function FileUpload() {
               <Download className="w-4 h-4" />
             </Button>
           )}
-          {row.status === 'failed' && row.errorMessage && (
+          {row.status === "failed" && row.errorMessage && (
             <Button
               variant="ghost"
               size="sm"
               className="text-destructive hover:text-destructive/80"
-              onClick={() => toast({
-                title: "Ошибка обработки",
-                description: row.errorMessage,
-                variant: "destructive",
-              })}
+              onClick={() =>
+                toast({
+                  title: "Ошибка обработки",
+                  description: row.errorMessage,
+                  variant: "destructive",
+                })
+              }
             >
               <AlertCircle className="w-4 h-4" />
             </Button>
           )}
         </div>
-      )
-    }
+      ),
+    },
   ];
 
-  if (isLoading) {
+  if (uploadsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -263,8 +278,8 @@ export default function FileUpload() {
         <CardContent>
           <div
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-              dragActive 
-                ? "border-primary bg-primary/5" 
+              dragActive
+                ? "border-primary bg-primary/5"
                 : "border-border hover:border-primary/50"
             }`}
             onDragEnter={handleDrag}
@@ -305,7 +320,10 @@ export default function FileUpload() {
             <div className="mt-6 space-y-3">
               <h4 className="font-medium">Выбранные файлы:</h4>
               {selectedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                >
                   <div className="flex items-center space-x-3">
                     <File className="w-5 h-5 text-muted-foreground" />
                     <div>

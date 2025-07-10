@@ -20,7 +20,7 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editingLpTracker, setEditingLpTracker] = useState<any>(null);
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
@@ -253,7 +253,7 @@ export default function UserManagement() {
     },
   ];
 
-  if (isLoading) {
+  if (usersLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

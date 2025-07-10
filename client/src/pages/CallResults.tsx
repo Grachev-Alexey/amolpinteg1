@@ -196,7 +196,7 @@ export default function CallResults() {
     }
   ];
 
-  if (isLoading) {
+  if (callResultsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">

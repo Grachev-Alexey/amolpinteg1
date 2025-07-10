@@ -1,22 +1,38 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useAuthRedirect } from "@/lib/auth";
+import {
+  useAuthRedirect,
+  isUnauthorizedError,
+  handleUnauthorizedError,
+} from "@/lib/auth";
 import DataTable from "@/components/DataTable";
 import AdminPageHeader from "@/components/AdminPageHeader";
-import { 
-  AlertCircle, 
-  Info, 
-  AlertTriangle, 
-  FileText, 
-  Filter, 
+import {
+  AlertCircle,
+  Info,
+  AlertTriangle,
+  FileText,
+  Filter,
   Download,
   RefreshCw,
-  Eye
+  Eye,
 } from "lucide-react";
 
 export default function Logs() {
@@ -26,19 +42,23 @@ export default function Logs() {
   const [filterSource, setFilterSource] = useState<string>("all");
 
   // Fetch logs - use admin logs for superuser, user logs for regular users
-  const { data: logs = [], isLoading: logsLoading, refetch } = useQuery({
-    queryKey: ['/api/admin/logs'],
+  const {
+    data: logs = [],
+    isLoading: logsLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["/api/admin/logs"],
     retry: false,
     refetchInterval: 10000, // Auto-refresh every 10 seconds
   });
 
   const getLevelIcon = (level: string) => {
     switch (level) {
-      case 'error':
+      case "error":
         return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case 'warning':
+      case "warning":
         return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
-      case 'info':
+      case "info":
         return <Info className="w-4 h-4 text-blue-500" />;
       default:
         return <FileText className="w-4 h-4 text-gray-500" />;
@@ -47,40 +67,40 @@ export default function Logs() {
 
   const getLevelBadgeColor = (level: string) => {
     switch (level) {
-      case 'error':
-        return 'bg-red-500/20 text-red-500';
-      case 'warning':
-        return 'bg-yellow-500/20 text-yellow-500';
-      case 'info':
-        return 'bg-blue-500/20 text-blue-500';
+      case "error":
+        return "bg-red-500/20 text-red-500";
+      case "warning":
+        return "bg-yellow-500/20 text-yellow-500";
+      case "info":
+        return "bg-blue-500/20 text-blue-500";
       default:
-        return 'bg-gray-500/20 text-gray-500';
+        return "bg-gray-500/20 text-gray-500";
     }
   };
 
   const getSourceBadgeColor = (source: string) => {
     switch (source) {
-      case 'webhook':
-        return 'bg-purple-500/20 text-purple-500';
-      case 'sync':
-        return 'bg-green-500/20 text-green-500';
-      case 'upload':
-        return 'bg-blue-500/20 text-blue-500';
-      case 'settings':
-        return 'bg-orange-500/20 text-orange-500';
-      case 'rules':
-        return 'bg-indigo-500/20 text-indigo-500';
-      case 'metadata':
-        return 'bg-pink-500/20 text-pink-500';
+      case "webhook":
+        return "bg-purple-500/20 text-purple-500";
+      case "sync":
+        return "bg-green-500/20 text-green-500";
+      case "upload":
+        return "bg-blue-500/20 text-blue-500";
+      case "settings":
+        return "bg-orange-500/20 text-orange-500";
+      case "rules":
+        return "bg-indigo-500/20 text-indigo-500";
+      case "metadata":
+        return "bg-pink-500/20 text-pink-500";
       default:
-        return 'bg-gray-500/20 text-gray-500';
+        return "bg-gray-500/20 text-gray-500";
     }
   };
 
   const formatLogMessage = (message: string) => {
     // Truncate long messages
     if (message.length > 100) {
-      return message.substring(0, 100) + '...';
+      return message.substring(0, 100) + "...";
     }
     return message;
   };
@@ -104,7 +124,9 @@ export default function Logs() {
     const details = JSON.stringify(log.data, null, 2);
     toast({
       title: "Детали лога",
-      description: details ? `Дополнительная информация: ${details}` : "Нет дополнительной информации",
+      description: details
+        ? `Дополнительная информация: ${details}`
+        : "Нет дополнительной информации",
     });
   };
 
@@ -129,7 +151,7 @@ export default function Logs() {
             {value.toUpperCase()}
           </Badge>
         </div>
-      )
+      ),
     },
     {
       key: "source",
@@ -138,7 +160,7 @@ export default function Logs() {
         <Badge variant="secondary" className={getSourceBadgeColor(value)}>
           {value}
         </Badge>
-      )
+      ),
     },
     {
       key: "userId",
@@ -153,7 +175,7 @@ export default function Logs() {
             <span className="text-muted-foreground">Система</span>
           )}
         </div>
-      )
+      ),
     },
     {
       key: "message",
@@ -163,7 +185,7 @@ export default function Logs() {
         <div className="font-medium max-w-md text-foreground">
           {formatLogMessage(value)}
         </div>
-      )
+      ),
     },
     {
       key: "createdAt",
@@ -171,9 +193,9 @@ export default function Logs() {
       sortable: true,
       render: (value: string) => (
         <div className="text-sm text-muted-foreground">
-          {new Date(value).toLocaleString('ru-RU')}
+          {new Date(value).toLocaleString("ru-RU")}
         </div>
-      )
+      ),
     },
     {
       key: "actions_column",
@@ -191,11 +213,11 @@ export default function Logs() {
             </Button>
           )}
         </div>
-      )
-    }
+      ),
+    },
   ];
 
-  if (isLoading) {
+  if (logsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -242,7 +264,7 @@ export default function Logs() {
               <div>
                 <p className="text-sm text-muted-foreground">Ошибки</p>
                 <p className="text-2xl font-bold text-red-500">
-                  {logs.filter((log: any) => log.level === 'error').length}
+                  {logs.filter((log: any) => log.level === "error").length}
                 </p>
               </div>
               <AlertCircle className="w-8 h-8 text-red-500" />
@@ -255,7 +277,7 @@ export default function Logs() {
               <div>
                 <p className="text-sm text-muted-foreground">Предупреждения</p>
                 <p className="text-2xl font-bold text-yellow-500">
-                  {logs.filter((log: any) => log.level === 'warning').length}
+                  {logs.filter((log: any) => log.level === "warning").length}
                 </p>
               </div>
               <AlertTriangle className="w-8 h-8 text-yellow-500" />
@@ -268,7 +290,7 @@ export default function Logs() {
               <div>
                 <p className="text-sm text-muted-foreground">Информация</p>
                 <p className="text-2xl font-bold text-blue-500">
-                  {logs.filter((log: any) => log.level === 'info').length}
+                  {logs.filter((log: any) => log.level === "info").length}
                 </p>
               </div>
               <Info className="w-8 h-8 text-blue-500" />
@@ -318,8 +340,8 @@ export default function Logs() {
               </Select>
             </div>
             <div className="flex items-end">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setFilterLevel("all");
                   setFilterSource("all");
