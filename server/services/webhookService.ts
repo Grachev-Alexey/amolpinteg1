@@ -428,28 +428,68 @@ export class WebhookService {
       }
 
       for (const action of actions.list) {
-        switch (action.type) {
-          case 'create_amocrm_lead':
-            await this.amoCrmService.createLead(eventData.userId, action.data);
-            break;
-          case 'update_amocrm_lead':
-            await this.amoCrmService.updateLead(eventData.userId, action.leadId, action.data);
-            break;
-          case 'create_amocrm_contact':
-            await this.amoCrmService.createContact(eventData.userId, action.data);
-            break;
-          case 'send_to_lptracker':
-            await this.lpTrackerService.sendLead(eventData.userId, action.data);
-            break;
-          case 'update_lptracker_lead':
-            await this.lpTrackerService.updateLead(eventData.userId, action.leadId, action.data);
-            break;
-          default:
-            await this.logService.log(eventData.userId, 'warning', `Неизвестный тип действия: ${action.type}`, { action }, 'webhook');
+        try {
+          await this.logService.log(eventData.userId, 'info', `Выполняется действие: ${action.type}`, { action }, 'webhook');
+
+          // Подготавливаем данные для синхронизации из различных источников
+          const webhookData = {
+            name: eventData.leadDetails?.name || eventData.contactsDetails?.[0]?.name || eventData.callData?.contact_name || 'Новый контакт',
+            first_name: eventData.contactsDetails?.[0]?.first_name || eventData.callData?.contact_name || '',
+            last_name: eventData.contactsDetails?.[0]?.last_name || '',
+            phone: this.extractPhoneFromContact(eventData.contactsDetails?.[0]) || eventData.callData?.phone || '',
+            email: this.extractEmailFromContact(eventData.contactsDetails?.[0]) || eventData.callData?.email || '',
+            deal_name: eventData.leadDetails?.name || 'Новая сделка',
+            price: eventData.leadDetails?.price || 0,
+            custom_fields: eventData.leadDetails?.custom_fields_values || {},
+            source: 'webhook_automation',
+            campaign: eventData.callData?.campaign || '',
+            keyword: eventData.callData?.keyword || ''
+          };
+
+          switch (action.type) {
+            case 'sync_to_amocrm':
+              await this.amoCrmService.syncToAmoCrm(eventData.userId, webhookData, action.searchBy || 'phone');
+              break;
+            case 'sync_to_lptracker':
+              await this.lpTrackerService.syncToLpTracker(eventData.userId, webhookData, action.searchBy || 'phone');
+              break;
+            default:
+              await this.logService.log(eventData.userId, 'warning', `Неизвестный тип действия: ${action.type}`, { action }, 'webhook');
+          }
+        } catch (error) {
+          await this.logService.log(eventData.userId, 'error', `Ошибка выполнения действия: ${action.type}`, { error, action }, 'webhook');
         }
       }
     } catch (error) {
       await this.logService.log(eventData.userId, 'error', 'Ошибка при выполнении действий', { error, actions }, 'webhook');
     }
+  }
+
+  private extractPhoneFromContact(contact: any): string {
+    if (!contact || !contact.custom_fields_values) return '';
+    
+    const phoneField = contact.custom_fields_values.find((field: any) => 
+      field.field_code === 'PHONE' || field.field_name === 'Телефон'
+    );
+    
+    if (phoneField && phoneField.values && phoneField.values.length > 0) {
+      return phoneField.values[0].value;
+    }
+    
+    return '';
+  }
+
+  private extractEmailFromContact(contact: any): string {
+    if (!contact || !contact.custom_fields_values) return '';
+    
+    const emailField = contact.custom_fields_values.find((field: any) => 
+      field.field_code === 'EMAIL' || field.field_name === 'Email'
+    );
+    
+    if (emailField && emailField.values && emailField.values.length > 0) {
+      return emailField.values[0].value;
+    }
+    
+    return '';
   }
 }

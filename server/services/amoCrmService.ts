@@ -208,7 +208,7 @@ export class AmoCrmService {
     }
   }
 
-  async createLead(userId: string, leadData: any): Promise<any> {
+  async syncToAmoCrm(userId: string, webhookData: any, searchBy: string = "phone"): Promise<any> {
     try {
       const settings = await this.storage.getAmoCrmSettings(userId);
       if (!settings) {
@@ -216,43 +216,178 @@ export class AmoCrmService {
       }
 
       const apiKey = settings.apiKey;
-
       let normalizedSubdomain = settings.subdomain.replace(/^https?:\/\//, "");
       if (!normalizedSubdomain.includes(".amocrm.ru")) {
         normalizedSubdomain = `${normalizedSubdomain}.amocrm.ru`;
       }
-      const url = `https://${normalizedSubdomain}/api/v4/leads`;
+      const baseUrl = `https://${normalizedSubdomain}/api/v4`;
 
-      const response = await fetch(url, {
-        method: "POST",
+      await this.logService.log(userId, 'info', 'Starting AmoCRM sync', { webhookData, searchBy }, 'amocrm');
+
+      // 1. Найти или создать контакт
+      const contact = await this.findOrCreateContact(userId, baseUrl, apiKey, webhookData, searchBy);
+      
+      // 2. Найти или создать сделку для контакта
+      const deal = await this.findOrCreateDeal(userId, baseUrl, apiKey, contact.id, webhookData);
+
+      await this.logService.log(userId, 'info', 'AmoCRM sync completed', { 
+        contact: { id: contact.id, name: contact.name },
+        deal: { id: deal.id, name: deal.name }
+      }, 'amocrm');
+
+      return { contact, deal };
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'AmoCRM sync failed', { error: error.message }, 'amocrm');
+      throw error;
+    }
+  }
+
+  private async findOrCreateContact(userId: string, baseUrl: string, apiKey: string, webhookData: any, searchBy: string): Promise<any> {
+    try {
+      // Поиск контакта
+      let searchValue = '';
+      if (searchBy === 'phone' && webhookData.phone) {
+        searchValue = webhookData.phone;
+      } else if (searchBy === 'email' && webhookData.email) {
+        searchValue = webhookData.email;
+      } else if (searchBy === 'name' && webhookData.name) {
+        searchValue = webhookData.name;
+      }
+
+      if (searchValue) {
+        const searchResponse = await fetch(`${baseUrl}/contacts?query=${encodeURIComponent(searchValue)}`, {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (searchResponse.ok) {
+          const searchResult = await searchResponse.json();
+          if (searchResult._embedded && searchResult._embedded.contacts && searchResult._embedded.contacts.length > 0) {
+            const existingContact = searchResult._embedded.contacts[0];
+            await this.logService.log(userId, 'info', 'Found existing contact', { contactId: existingContact.id }, 'amocrm');
+            return existingContact;
+          }
+        }
+      }
+
+      // Создание нового контакта
+      const contactData = {
+        first_name: webhookData.first_name || webhookData.name || '',
+        last_name: webhookData.last_name || '',
+        name: webhookData.name || `${webhookData.first_name || ''} ${webhookData.last_name || ''}`.trim(),
+        custom_fields_values: []
+      };
+
+      // Добавляем телефон
+      if (webhookData.phone) {
+        contactData.custom_fields_values.push({
+          field_code: 'PHONE',
+          values: [{ value: webhookData.phone, enum_code: 'WORK' }]
+        });
+      }
+
+      // Добавляем email
+      if (webhookData.email) {
+        contactData.custom_fields_values.push({
+          field_code: 'EMAIL',
+          values: [{ value: webhookData.email, enum_code: 'WORK' }]
+        });
+      }
+
+      const createResponse = await fetch(`${baseUrl}/contacts`, {
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify([leadData]),
+        body: JSON.stringify([contactData]),
       });
 
-      if (!response.ok) {
-        throw new Error(`AmoCRM API error: ${response.status}`);
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create contact: ${createResponse.status}`);
       }
 
-      const result = await response.json();
-      await this.logService.log(
-        userId,
-        "info",
-        "Сделка создана в AmoCRM",
-        { result },
-        "sync",
-      );
-      return result;
+      const createResult = await createResponse.json();
+      const newContact = createResult._embedded.contacts[0];
+      await this.logService.log(userId, 'info', 'Created new contact', { contactId: newContact.id }, 'amocrm');
+      return newContact;
+
     } catch (error) {
-      await this.logService.log(
-        userId,
-        "error",
-        "Ошибка при создании сделки в AmoCRM",
-        { error },
-        "sync",
-      );
+      await this.logService.log(userId, 'error', 'Contact find/create failed', { error: error.message }, 'amocrm');
+      throw error;
+    }
+  }
+
+  private async findOrCreateDeal(userId: string, baseUrl: string, apiKey: string, contactId: number, webhookData: any): Promise<any> {
+    try {
+      // Поиск существующих сделок для контакта
+      const searchResponse = await fetch(`${baseUrl}/leads?filter[contacts][0]=${contactId}`, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (searchResponse.ok) {
+        const searchResult = await searchResponse.json();
+        if (searchResult._embedded && searchResult._embedded.leads && searchResult._embedded.leads.length > 0) {
+          const existingDeal = searchResult._embedded.leads[0];
+          await this.logService.log(userId, 'info', 'Found existing deal', { dealId: existingDeal.id }, 'amocrm');
+          
+          // Обновляем существующую сделку
+          const updateData = {
+            id: existingDeal.id,
+            name: webhookData.deal_name || existingDeal.name,
+            price: webhookData.price || existingDeal.price,
+          };
+
+          const updateResponse = await fetch(`${baseUrl}/leads`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify([updateData]),
+          });
+
+          if (updateResponse.ok) {
+            const updateResult = await updateResponse.json();
+            return updateResult._embedded.leads[0];
+          }
+          
+          return existingDeal;
+        }
+      }
+
+      // Создание новой сделки
+      const dealData = {
+        name: webhookData.deal_name || webhookData.name || 'Новая сделка',
+        price: webhookData.price || 0,
+        contacts: [{ id: contactId }],
+      };
+
+      const createResponse = await fetch(`${baseUrl}/leads`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([dealData]),
+      });
+
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create deal: ${createResponse.status}`);
+      }
+
+      const createResult = await createResponse.json();
+      const newDeal = createResult._embedded.leads[0];
+      await this.logService.log(userId, 'info', 'Created new deal', { dealId: newDeal.id }, 'amocrm');
+      return newDeal;
+
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'Deal find/create failed', { error: error.message }, 'amocrm');
       throw error;
     }
   }

@@ -19,7 +19,7 @@ export class LpTrackerService {
     return Buffer.from(hash, 'base64').toString();
   }
 
-  async sendLead(userId: string, leadData: any): Promise<any> {
+  async syncToLpTracker(userId: string, webhookData: any, searchBy: string = "phone"): Promise<any> {
     try {
       const userSettings = await this.storage.getLpTrackerSettings(userId);
       if (!userSettings) {
@@ -31,40 +31,130 @@ export class LpTrackerService {
         throw new Error('LPTracker global settings not configured');
       }
 
-      // Конструируем URL для API
-      const baseUrl = `https://${globalSettings.address}/api`;
-      
-      // Готовим данные для отправки
-      const requestData = {
-        login: globalSettings.login,
-        password: globalSettings.password,
-        service: globalSettings.service,
-        project_id: userSettings.projectId,
-        ...leadData
-      };
+      const token = await this.getAuthToken(globalSettings);
+      const baseUrl = `https://${globalSettings.address}`;
 
-      await this.logService.log(userId, 'info', 'Отправка лида в LPTracker', { 
-        projectId: userSettings.projectId,
-        leadData 
+      await this.logService.log(userId, 'info', 'Starting LPTracker sync', { webhookData, searchBy }, 'lptracker');
+
+      // 1. Найти или создать контакт
+      const contact = await this.findOrCreateContact(userId, baseUrl, token, userSettings.projectId, webhookData, searchBy);
+      
+      // 2. Найти или создать лид для контакта
+      const lead = await this.findOrCreateLead(userId, baseUrl, token, contact.id, webhookData);
+
+      await this.logService.log(userId, 'info', 'LPTracker sync completed', { 
+        contact: { id: contact.id, name: contact.name },
+        lead: { id: lead.id, name: lead.name }
       }, 'lptracker');
 
-      const response = await fetch(`${baseUrl}/send-lead`, {
+      return { contact, lead };
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'LPTracker sync failed', { error: error.message }, 'lptracker');
+      throw error;
+    }
+  }
+
+  private async findOrCreateContact(userId: string, baseUrl: string, token: string, projectId: string, webhookData: any, searchBy: string): Promise<any> {
+    try {
+      // Поиск контакта (LPTracker API может не поддерживать поиск, создаем новый)
+      const contactData = {
+        name: webhookData.name || webhookData.first_name || '',
+        profession: webhookData.profession || '',
+        site: webhookData.site || '',
+        details: []
+      };
+
+      // Добавляем контактные данные
+      if (webhookData.phone) {
+        contactData.details.push({
+          type: 'phone',
+          data: webhookData.phone
+        });
+      }
+
+      if (webhookData.email) {
+        contactData.details.push({
+          type: 'email',
+          data: webhookData.email
+        });
+      }
+
+      const createResponse = await fetch(`${baseUrl}/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'token': token
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify({
+          project_id: projectId,
+          ...contactData
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error(`LPTracker API error: ${response.status}`);
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create contact: ${createResponse.status}`);
       }
 
-      const result = await response.json();
-      await this.logService.log(userId, 'info', 'Лид отправлен в LPTracker', { result }, 'lptracker');
-      return result;
+      const createResult = await createResponse.json();
+      if (createResult.status === 'success') {
+        const newContact = createResult.result;
+        await this.logService.log(userId, 'info', 'Created new contact in LPTracker', { contactId: newContact.id }, 'lptracker');
+        return newContact;
+      } else {
+        throw new Error('Failed to create contact in LPTracker');
+      }
+
     } catch (error) {
-      await this.logService.log(userId, 'error', 'Ошибка при отправке лида в LPTracker', { error }, 'lptracker');
+      await this.logService.log(userId, 'error', 'Contact find/create failed', { error: error.message }, 'lptracker');
+      throw error;
+    }
+  }
+
+  private async findOrCreateLead(userId: string, baseUrl: string, token: string, contactId: number, webhookData: any): Promise<any> {
+    try {
+      // Создание нового лида (LPTracker всегда создает новый лид)
+      const leadData = {
+        contact_id: contactId,
+        name: webhookData.name || webhookData.deal_name || 'Новый лид',
+        callback: webhookData.callback || false,
+        funnel: webhookData.funnel || null,
+        view: {
+          source: webhookData.source || 'API',
+          campaign: webhookData.campaign || '',
+          keyword: webhookData.keyword || ''
+        },
+        custom: {}
+      };
+
+      // Добавляем кастомные поля
+      if (webhookData.custom_fields) {
+        leadData.custom = webhookData.custom_fields;
+      }
+
+      const createResponse = await fetch(`${baseUrl}/lead`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token
+        },
+        body: JSON.stringify(leadData),
+      });
+
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create lead: ${createResponse.status}`);
+      }
+
+      const createResult = await createResponse.json();
+      if (createResult.status === 'success') {
+        const newLead = createResult.result;
+        await this.logService.log(userId, 'info', 'Created new lead in LPTracker', { leadId: newLead.id }, 'lptracker');
+        return newLead;
+      } else {
+        throw new Error('Failed to create lead in LPTracker');
+      }
+
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'Lead find/create failed', { error: error.message }, 'lptracker');
       throw error;
     }
   }
