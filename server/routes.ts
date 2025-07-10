@@ -1201,7 +1201,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
       
-      console.log('[DEBUG] Fetching webhook status for all users');
       const allUsers = await db.select().from(users);
       const webhookStatuses = [];
 
@@ -1229,14 +1228,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: lpTrackerSettings.webhookActive ? 'configured' : 'not_configured'
           };
           
-          // Log webhook status for debugging
-          console.log(`[DEBUG] Webhook status for user ${user.username} (${user.id}):`, webhookData);
-          
           webhookStatuses.push(webhookData);
         }
       }
 
-      console.log('[DEBUG] Returning webhook statuses:', JSON.stringify(webhookStatuses, null, 2));
       res.json({ webhooks: webhookStatuses });
     } catch (error) {
       console.error("Error fetching webhook status:", error);
