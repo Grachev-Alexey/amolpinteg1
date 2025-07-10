@@ -9,19 +9,6 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes
-
-- **July 10, 2025**: Implemented Smart Field Mapping system
-  - Created SmartFieldMapper service for intelligent field placement
-  - System now automatically determines contact vs lead fields using CRM metadata
-  - Eliminated manual field placement - fields are mapped based on target field type
-  - Enhanced both AmoCRM and LPTracker services with smart mapping
-- **July 10, 2025**: Fixed contact name mapping priority (first_name > name > deal_name)
-- **July 10, 2025**: Migrated project from Replit Agent to standard Replit environment
-- **Optimization**: Updated AmoCRM service to use `with=leads` parameter when searching contacts, reducing API calls
-- **Database**: PostgreSQL database provisioned and migrations applied
-- **Performance**: Eliminated separate API requests for deal retrieval when contact already includes lead data
-
 
 ## System Architecture
 
