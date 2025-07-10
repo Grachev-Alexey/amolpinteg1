@@ -351,10 +351,13 @@ export default function RuleConstructor({
         list: rule.actions.list.map((a: any) => 
           a.id === actionId ? { 
             ...a, 
-            fieldMappings: mappings.reduce((acc, mapping, index) => {
-              // Используем стабильный ключ для сохранения порядка
-              const key = mapping.sourceField || `temp_${index}_${mapping.id}`;
-              acc[key] = mapping.targetField || '';
+            // Сохраняем массив маппингов напрямую
+            fieldMappingsArray: mappings,
+            // Для совместимости со старым кодом, также сохраняем как объект только заполненные поля
+            fieldMappings: mappings.reduce((acc, mapping) => {
+              if (mapping.sourceField && mapping.targetField) {
+                acc[mapping.sourceField] = mapping.targetField;
+              }
               return acc;
             }, {} as any)
           } : a
@@ -377,7 +380,9 @@ export default function RuleConstructor({
                 Object.entries(action.fieldMappings).filter(([key, value]) => 
                   key && value && key !== '' && value !== ''
                 )
-              ) : {}
+              ) : {},
+            // Убираем временное поле fieldMappingsArray при сохранении
+            fieldMappingsArray: undefined
           }))
         }
       };
@@ -661,18 +666,16 @@ export default function RuleConstructor({
                     <div className="space-y-4">
                       <FieldMappingEditor
                         mappings={(() => {
-                          // Преобразуем старый формат fieldMappings в новый формат массива
-                          const fieldMappings = action.fieldMappings || {};
-                          // Сортируем по ключам для стабильного порядка
-                          const sortedEntries = Object.entries(fieldMappings).sort(([a], [b]) => {
-                            // Temp поля в конце
-                            if (a.startsWith('temp_') && !b.startsWith('temp_')) return 1;
-                            if (!a.startsWith('temp_') && b.startsWith('temp_')) return -1;
-                            // Остальные по алфавиту
-                            return a.localeCompare(b);
-                          });
+                          // Используем сохраненный массив если есть, иначе конвертируем из объекта
+                          if (action.fieldMappingsArray && Array.isArray(action.fieldMappingsArray)) {
+                            return action.fieldMappingsArray;
+                          }
                           
-                          return sortedEntries.map(([sourceField, targetField], index) => ({
+                          // Конвертация из старого формата
+                          const fieldMappings = action.fieldMappings || {};
+                          const entries = Object.entries(fieldMappings);
+                          
+                          return entries.map(([sourceField, targetField], index) => ({
                             id: sourceField.startsWith('temp_') ? sourceField.replace(/temp_\d+_/, '') : `mapping_${index}_${sourceField}`,
                             sourceField: sourceField.startsWith('temp_') ? '' : sourceField,
                             targetField: targetField as string
