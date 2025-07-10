@@ -158,27 +158,59 @@ export class LpTrackerService {
 
   async testConnection(login: string, password: string, address: string = 'direct.lptracker.ru'): Promise<boolean> {
     try {
-      const baseUrl = `https://${address}/api`;
+      const baseUrl = `https://${address}`;
       
-      const requestData = {
-        login,
-        password,
-        service: 'CRM Integration Test'
-      };
-
-      const response = await fetch(`${baseUrl}/getProjectList`, {
+      const response = await fetch(`${baseUrl}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify({ 
+          login, 
+          password, 
+          service: 'CRM Integration',
+          version: '1.0'
+        }),
       });
 
-      return response.ok;
+      if (!response.ok) {
+        return false;
+      }
+
+      const result = await response.json();
+      return result.status === 'success' && result.result?.token;
     } catch (error) {
       console.error('LPTracker connection test failed:', error);
       return false;
     }
+  }
+
+  private async getAuthToken(globalSettings: any): Promise<string> {
+    const baseUrl = `https://${globalSettings.address}`;
+    
+    const response = await fetch(`${baseUrl}/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        login: globalSettings.login,
+        password: globalSettings.password,
+        service: globalSettings.service,
+        version: '1.0'
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`LPTracker auth failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (result.status !== 'success' || !result.result?.token) {
+      throw new Error('LPTracker auth failed: no token received');
+    }
+
+    return result.result.token;
   }
 
   async refreshMetadata(userId: string): Promise<void> {
@@ -188,13 +220,8 @@ export class LpTrackerService {
         throw new Error('LPTracker global settings not configured');
       }
 
-      const baseUrl = `https://${globalSettings.address}/api`;
-      
-      const requestData = {
-        login: globalSettings.login,
-        password: globalSettings.password,
-        service: globalSettings.service
-      };
+      const token = await this.getAuthToken(globalSettings);
+      const baseUrl = `https://${globalSettings.address}`;
 
       // Get projects list
       try {
@@ -202,8 +229,8 @@ export class LpTrackerService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'token': token,
           },
-          body: JSON.stringify(requestData),
         });
 
         if (projectsResponse.ok) {
@@ -226,9 +253,9 @@ export class LpTrackerService {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'token': token,
             },
             body: JSON.stringify({
-              ...requestData,
               project_id: userSettings.projectId,
               limit: 1
             }),
@@ -261,20 +288,15 @@ export class LpTrackerService {
         throw new Error('LPTracker global settings not configured');
       }
 
-      const baseUrl = `https://${globalSettings.address}/api`;
-      
-      const requestData = {
-        login: globalSettings.login,
-        password: globalSettings.password,
-        service: globalSettings.service
-      };
+      const token = await this.getAuthToken(globalSettings);
+      const baseUrl = `https://${globalSettings.address}`;
 
       const response = await fetch(`${baseUrl}/getProjectList`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'token': token,
         },
-        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
