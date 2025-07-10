@@ -124,43 +124,109 @@ export class WebhookService {
         payload: payload
       });
       
+      // LPTracker отправляет данные в формате { data: "JSON_STRING" }
+      let webhookData;
+      if (payload.data && typeof payload.data === 'string') {
+        try {
+          webhookData = JSON.parse(payload.data);
+        } catch (parseError) {
+          await this.logService.log(undefined, 'error', 'LPTracker - Ошибка парсинга данных', { 
+            payload, parseError 
+          }, 'webhook');
+          return;
+        }
+      } else {
+        webhookData = payload;
+      }
+      
       await this.logService.log(undefined, 'info', 'LPTracker Webhook - Детальный анализ', { 
-        payloadKeys: Object.keys(payload || {}),
-        payloadType: typeof payload,
-        payloadLength: JSON.stringify(payload).length,
-        fullPayload: payload 
+        originalPayload: payload,
+        parsedData: webhookData,
+        projectId: webhookData.project_id,
+        action: webhookData.action
       }, 'webhook');
 
-      // Определяем тип события
-      const eventType = payload.event || payload.type || payload.event_type;
-      
-      console.log("LPTracker Event Type detected:", eventType);
-      
-      if (!eventType) {
-        await this.logService.log(undefined, 'warning', 'LPTracker - Неизвестный тип события', { 
-          payload,
-          possibleEventFields: {
-            event: payload.event,
-            type: payload.type,
-            event_type: payload.event_type
-          }
+      // Находим пользователя по project_id
+      const projectId = webhookData.project_id;
+      if (!projectId) {
+        await this.logService.log(undefined, 'warning', 'LPTracker - Отсутствует project_id', { 
+          webhookData 
         }, 'webhook');
         return;
       }
 
-      // Обработка различных типов событий
-      switch (eventType) {
-        case 'call_completed':
-          await this.handleCallCompleted(payload);
-          break;
-        case 'lead_status_updated':
-          await this.handleLpTrackerLeadStatusUpdated(payload);
-          break;
-        default:
-          await this.logService.log(undefined, 'info', `Необработанный тип события: ${eventType}`, { payload }, 'webhook');
+      // Находим пользователя с данным project_id
+      const userId = await this.findUserByProjectId(projectId);
+      if (!userId) {
+        await this.logService.log(undefined, 'warning', `LPTracker - Пользователь не найден для проекта: ${projectId}`, { 
+          projectId, webhookData 
+        }, 'webhook');
+        return;
       }
+
+      await this.logService.log(userId, 'info', `LPTracker - Обработка вебхука для проекта ${projectId}`, { 
+        projectId,
+        action: webhookData.action,
+        leadId: webhookData.id,
+        stageName: webhookData.stage?.name,
+        contactName: webhookData.contact?.name
+      }, 'webhook');
+
+      // Получаем правила пользователя и обрабатываем событие
+      const syncRules = await this.storage.getSyncRules(userId);
+      
+      // Обрабатываем вебхук через правила без привязки к типу события
+      for (const rule of syncRules) {
+        try {
+          // Проверяем условия правила
+          if (this.checkConditions(rule.conditions, webhookData)) {
+            await this.logService.log(userId, 'info', `LPTracker - Правило "${rule.name}" применимо`, { 
+              ruleId: rule.id,
+              ruleName: rule.name,
+              leadId: webhookData.id
+            }, 'webhook');
+
+            // Выполняем действия правила
+            await this.executeActions(rule.actions, webhookData);
+            
+            // Увеличиваем счетчик выполнений правила
+            await this.storage.incrementRuleExecution(rule.id);
+          } else {
+            await this.logService.log(userId, 'info', `LPTracker - Правило "${rule.name}" не применимо`, { 
+              ruleId: rule.id,
+              ruleName: rule.name,
+              leadId: webhookData.id
+            }, 'webhook');
+          }
+        } catch (ruleError) {
+          await this.logService.log(userId, 'error', `LPTracker - Ошибка обработки правила "${rule.name}"`, { 
+            ruleId: rule.id,
+            error: ruleError,
+            leadId: webhookData.id
+          }, 'webhook');
+        }
+      }
+      
     } catch (error) {
       await this.logService.log(undefined, 'error', 'Ошибка при обработке webhook LPTracker', { error, payload }, 'webhook');
+    }
+  }
+
+  // Вспомогательный метод для поиска пользователя по project_id LPTracker
+  private async findUserByProjectId(projectId: number): Promise<string | null> {
+    try {
+      const allLpTrackerSettings = await this.storage.getAllLpTrackerSettings();
+      
+      for (const settings of allLpTrackerSettings) {
+        if (settings.projectId === projectId.toString()) {
+          return settings.userId;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      await this.logService.log(undefined, 'error', 'Ошибка поиска пользователя по project_id', { error, projectId }, 'webhook');
+      return null;
     }
   }
 
