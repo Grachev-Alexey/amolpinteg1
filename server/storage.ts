@@ -54,6 +54,7 @@ export interface IStorage {
   getLpTrackerSettings(userId: string): Promise<LpTrackerSettings | undefined>;
   getAllLpTrackerSettings(): Promise<LpTrackerSettings[]>;
   saveLpTrackerSettings(settings: InsertLpTrackerSettings): Promise<LpTrackerSettings>;
+  updateLpTrackerSettings(userId: string, settings: Partial<InsertLpTrackerSettings>): Promise<LpTrackerSettings | undefined>;
 
   // Metadata operations
   getAmoCrmMetadata(userId: string, type: string): Promise<AmoCrmMetadata | undefined>;
@@ -277,6 +278,15 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return saved;
+  }
+
+  async updateLpTrackerSettings(userId: string, settings: Partial<InsertLpTrackerSettings>): Promise<LpTrackerSettings | undefined> {
+    const [updated] = await db
+      .update(lpTrackerSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(lpTrackerSettings.userId, userId))
+      .returning();
+    return updated;
   }
 
   // Metadata operations

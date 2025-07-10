@@ -68,6 +68,7 @@ export const lpTrackerSettings = pgTable("lptracker_settings", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().unique().references(() => users.id),
   projectId: varchar("project_id").notNull(), // LPTracker project ID
+  webhookActive: boolean("webhook_active").default(false), // Whether webhook is active for this user's project
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

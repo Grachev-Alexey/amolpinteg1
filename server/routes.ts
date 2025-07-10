@@ -1144,19 +1144,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Setup LPTracker webhook (global for admin)
-  app.post('/api/lptracker/webhook', requireSuperuser, async (req: any, res) => {
+  // Setup LPTracker webhook for specific user
+  app.post('/api/lptracker/webhook/user/:userId', requireSuperuser, async (req: any, res) => {
     try {
+      const { userId } = req.params;
       const { webhookUrl } = req.body;
-      
+
       if (!webhookUrl) {
-        return res.status(400).json({ message: 'Webhook URL обязателен' });
+        return res.status(400).json({ success: false, message: 'Webhook URL обязателен' });
       }
-      
-      const result = await lpTrackerService.setupWebhook(webhookUrl);
-      
+
+      if (!userId) {
+        return res.status(400).json({ success: false, message: 'User ID обязателен' });
+      }
+
+      const result = await lpTrackerService.setupWebhook(userId, webhookUrl);
       if (result) {
-        res.json({ success: true, message: 'Webhook установлен успешно' });
+        res.json({ success: true, message: 'Webhook установлен успешно для пользователя' });
       } else {
         res.status(500).json({ success: false, message: 'Не удалось установить webhook' });
       }
@@ -1166,13 +1170,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Remove LPTracker webhook
-  app.delete('/api/lptracker/webhook', requireSuperuser, async (req: any, res) => {
+  // Remove LPTracker webhook for specific user
+  app.delete('/api/lptracker/webhook/user/:userId', requireSuperuser, async (req: any, res) => {
     try {
-      const result = await lpTrackerService.removeWebhook();
-      
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({ success: false, message: 'User ID обязателен' });
+      }
+
+      const result = await lpTrackerService.removeWebhook(userId);
       if (result) {
-        res.json({ success: true, message: 'Webhook удален успешно' });
+        res.json({ success: true, message: 'Webhook удален успешно для пользователя' });
       } else {
         res.status(500).json({ success: false, message: 'Не удалось удалить webhook' });
       }
@@ -1182,7 +1191,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get LPTracker webhook status
+  // Get LPTracker webhook status for user
+  app.get('/api/lptracker/webhook-status/:userId', requireSuperuser, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const result = await lpTrackerService.getWebhookStatus(userId);
+      res.json(result);
+    } catch (error) {
+      console.error('Error getting LPTracker webhook status:', error);
+      res.status(500).json({ message: 'Не удалось получить статус webhook' });
+    }
+  });
+
+  // Get global LPTracker webhook status
   app.get('/api/lptracker/webhook-status', requireSuperuser, async (req: any, res) => {
     try {
       const result = await lpTrackerService.getWebhookStatus();
@@ -1217,9 +1238,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: user.id,
             username: user.username,
             projectId: lpTrackerSettings.projectId,
+            webhookActive: lpTrackerSettings.webhookActive || false,
             lastActivity: lastWebhookActivity,
             activityCount: webhookActivity.length,
-            status: webhookActivity.length > 0 ? 'active' : 'inactive'
+            status: lpTrackerSettings.webhookActive ? 'configured' : 'not_configured'
           });
         }
       }

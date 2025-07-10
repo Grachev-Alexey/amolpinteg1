@@ -456,44 +456,13 @@ export class LpTrackerService {
     }
   }
 
-  async setupWebhook(webhookUrl: string): Promise<boolean> {
+  async setupWebhook(userId: string, webhookUrl: string): Promise<boolean> {
     try {
-      // Mock the webhook setup for now since LPTracker API documentation is unclear
-      // In production, this would call the actual LPTracker webhook setup endpoint
-      
-      // Update global settings with webhook URL
-      await this.storage.updateLpTrackerGlobalSettings({
-        webhookUrl: webhookUrl,
-        webhookActive: true
-      });
-      
-      await this.logService.info(undefined, 'LPTracker webhook установлен успешно', { webhookUrl }, 'webhook');
-      return true;
-    } catch (error) {
-      await this.logService.error(undefined, 'Ошибка при установке LPTracker webhook', { error: error.message }, 'webhook');
-      return false;
-    }
-  }
-
-  async getWebhookStatus(): Promise<{ url: string | null; active: boolean }> {
-    try {
-      const globalSettings = await this.storage.getLpTrackerGlobalSettings();
-      if (!globalSettings) {
-        return { url: null, active: false };
+      const userSettings = await this.storage.getLpTrackerSettings(userId);
+      if (!userSettings) {
+        throw new Error('LPTracker project settings not found');
       }
 
-      return {
-        url: globalSettings.webhookUrl || null,
-        active: globalSettings.webhookActive || false
-      };
-    } catch (error) {
-      await this.logService.error(undefined, 'Error getting webhook status', { error }, 'webhook');
-      return { url: null, active: false };
-    }
-  }
-
-  async removeWebhook(): Promise<boolean> {
-    try {
       const globalSettings = await this.storage.getLpTrackerGlobalSettings();
       if (!globalSettings) {
         throw new Error('LPTracker global settings not configured');
@@ -502,36 +471,131 @@ export class LpTrackerService {
       const token = await this.getAuthToken(globalSettings);
       const baseUrl = `https://${globalSettings.address}`;
 
-      // Remove webhook
-      const response = await fetch(`${baseUrl}/webhook`, {
-        method: 'DELETE',
+      // Use the correct LPTracker API: PUT project/[project_id]/callback-url
+      const response = await fetch(`${baseUrl}/project/${userSettings.projectId}/callback-url`, {
+        method: 'PUT',
         headers: {
+          'Content-Type': 'application/json',
           'token': token,
         },
+        body: JSON.stringify({
+          url: webhookUrl
+        }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        await this.logService.error(undefined, `Failed to remove LPTracker webhook: ${response.status}`, { error: errorText });
+        await this.logService.error(userId, `Failed to setup LPTracker webhook: ${response.status}`, { error: errorText, projectId: userSettings.projectId }, 'webhook');
         return false;
       }
 
       const result = await response.json();
       if (result.status === 'success') {
-        // Update global settings
-        await this.storage.updateLpTrackerGlobalSettings({
-          webhookUrl: null,
-          webhookActive: false
+        // Update user settings to mark webhook as active
+        await this.storage.updateLpTrackerSettings(userId, {
+          webhookActive: true
         });
         
-        await this.logService.info(undefined, 'LPTracker webhook удален успешно', {}, 'webhook');
+        // Update global settings with webhook URL if not set
+        if (!globalSettings.webhookUrl) {
+          await this.storage.updateLpTrackerGlobalSettings({
+            webhookUrl: webhookUrl,
+            webhookActive: true
+          });
+        }
+        
+        await this.logService.info(userId, 'LPTracker webhook установлен успешно', { webhookUrl, projectId: userSettings.projectId }, 'webhook');
         return true;
       } else {
-        await this.logService.error(undefined, 'Failed to remove LPTracker webhook', { result }, 'webhook');
+        await this.logService.error(userId, 'Failed to setup LPTracker webhook', { result, projectId: userSettings.projectId }, 'webhook');
         return false;
       }
     } catch (error) {
-      await this.logService.error(undefined, 'Error removing LPTracker webhook', { error }, 'webhook');
+      await this.logService.error(userId, 'Ошибка при установке LPTracker webhook', { error: error.message }, 'webhook');
+      return false;
+    }
+  }
+
+  async getWebhookStatus(userId?: string): Promise<{ url: string | null; active: boolean }> {
+    try {
+      if (userId) {
+        // Get user-specific webhook status
+        const userSettings = await this.storage.getLpTrackerSettings(userId);
+        if (!userSettings) {
+          return { url: null, active: false };
+        }
+
+        const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+        return {
+          url: globalSettings?.webhookUrl || null,
+          active: userSettings.webhookActive || false
+        };
+      } else {
+        // Get global webhook status
+        const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+        if (!globalSettings) {
+          return { url: null, active: false };
+        }
+
+        return {
+          url: globalSettings.webhookUrl || null,
+          active: globalSettings.webhookActive || false
+        };
+      }
+    } catch (error) {
+      await this.logService.error(userId, 'Error getting webhook status', { error }, 'webhook');
+      return { url: null, active: false };
+    }
+  }
+
+  async removeWebhook(userId: string): Promise<boolean> {
+    try {
+      const userSettings = await this.storage.getLpTrackerSettings(userId);
+      if (!userSettings) {
+        throw new Error('LPTracker project settings not found');
+      }
+
+      const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+      if (!globalSettings) {
+        throw new Error('LPTracker global settings not configured');
+      }
+
+      const token = await this.getAuthToken(globalSettings);
+      const baseUrl = `https://${globalSettings.address}`;
+
+      // Remove webhook using correct API: PUT with empty URL to disable
+      const response = await fetch(`${baseUrl}/project/${userSettings.projectId}/callback-url`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token,
+        },
+        body: JSON.stringify({
+          url: ""
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        await this.logService.error(userId, `Failed to remove LPTracker webhook: ${response.status}`, { error: errorText, projectId: userSettings.projectId });
+        return false;
+      }
+
+      const result = await response.json();
+      if (result.status === 'success') {
+        // Update user settings
+        await this.storage.updateLpTrackerSettings(userId, {
+          webhookActive: false
+        });
+        
+        await this.logService.info(userId, 'LPTracker webhook удален успешно', { projectId: userSettings.projectId }, 'webhook');
+        return true;
+      } else {
+        await this.logService.error(userId, 'Failed to remove LPTracker webhook', { result, projectId: userSettings.projectId }, 'webhook');
+        return false;
+      }
+    } catch (error) {
+      await this.logService.error(userId, 'Error removing LPTracker webhook', { error }, 'webhook');
       return false;
     }
   }
