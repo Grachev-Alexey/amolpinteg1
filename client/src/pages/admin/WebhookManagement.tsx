@@ -169,9 +169,9 @@ export default function WebhookManagement() {
           <div className="grid gap-4">
             {usersWithLpTracker.map((user: any) => {
               const userWebhook = webhookStatus?.webhooks?.find(
-                (w: any) => w.userId === user.userId
+                (w: any) => w.username === user.username
               );
-              const isWebhookActive = userWebhook?.webhookActive || false;
+              const isWebhookActive = userWebhook?.status === 'active';
 
               return (
                 <Card key={user.userId}>
