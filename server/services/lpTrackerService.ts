@@ -58,10 +58,11 @@ export class LpTrackerService {
     try {
       // Поиск контакта (LPTracker API может не поддерживать поиск, создаем новый)
       const contactData = {
-        name: webhookData.name || webhookData.first_name || '',
+        name: webhookData.first_name || webhookData.name || '',
         profession: webhookData.profession || '',
         site: webhookData.site || '',
-        details: []
+        details: [],
+        fields: {}
       };
 
       // Добавляем контактные данные
@@ -77,6 +78,11 @@ export class LpTrackerService {
           type: 'email',
           data: webhookData.email
         });
+      }
+
+      // Добавляем кастомные поля контакта
+      if (webhookData.lptracker_contact_fields) {
+        contactData.fields = webhookData.lptracker_contact_fields;
       }
 
       const createResponse = await fetch(`${baseUrl}/contact`, {
@@ -115,7 +121,7 @@ export class LpTrackerService {
       // Создание нового лида (LPTracker всегда создает новый лид)
       const leadData = {
         contact_id: contactId,
-        name: webhookData.name || webhookData.deal_name || 'Новый лид',
+        name: webhookData.deal_name || webhookData.name || 'Новый лид',
         callback: webhookData.callback || false,
         funnel: webhookData.funnel || null,
         view: {

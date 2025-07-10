@@ -546,18 +546,26 @@ export class WebhookService {
 
           // Подготавливаем данные для синхронизации из различных источников
           const webhookData = {
-            name: eventData.contact?.name || eventData.contactsDetails?.[0]?.name || eventData.callData?.contact_name || eventData.leadDetails?.name || 'Новый контакт',
+            // Для LPTracker имя контакта находится в contact.name, но name содержит название лида
+            name: eventData.contact?.name || eventData.contactsDetails?.[0]?.name || eventData.callData?.contact_name || 'Новый контакт',
             first_name: eventData.contactsDetails?.[0]?.first_name || eventData.callData?.contact_name || '',
             last_name: eventData.contactsDetails?.[0]?.last_name || '',
             phone: this.extractPhoneFromLpTrackerContact(eventData.contact) || this.extractPhoneFromContact(eventData.contactsDetails?.[0]) || eventData.callData?.phone || '',
             email: this.extractEmailFromContact(eventData.contactsDetails?.[0]) || eventData.callData?.email || '',
-            deal_name: eventData.leadDetails?.name || eventData.name || 'Новая сделка',
+            deal_name: eventData.name || eventData.leadDetails?.name || 'Новая сделка',
             price: eventData.leadDetails?.price || 0,
             custom_fields: eventData.leadDetails?.custom_fields_values || {},
             source: 'webhook_automation',
             campaign: eventData.callData?.campaign || '',
             keyword: eventData.callData?.keyword || ''
           };
+
+          // Логируем исходные данные для понимания структуры
+          await this.logService.log(eventData.userId, 'info', 'Исходные данные webhook для синхронизации', { 
+            eventDataKeys: Object.keys(eventData),
+            contactData: eventData.contact,
+            webhookDataBefore: webhookData
+          }, 'webhook');
 
           // Применяем маппинг полей если он настроен
           const mappedWebhookData = this.applyFieldMapping(webhookData, action.fieldMappings || {}, eventData);

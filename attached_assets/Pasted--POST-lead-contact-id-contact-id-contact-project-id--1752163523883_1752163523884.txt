@@ -1,0 +1,117 @@
+Запрос
+POST /lead
+Тело запроса
+{
+  "contact_id": "contact_id",
+  "contact": {
+    "project_id": "project_id",
+    "name": "Contact_Name",
+    "profession": "Profession",
+    "site": "site_of_project",
+    "details": [
+      {
+        "type": "email/phone",
+        "data": "email@example.com/+71234567890"
+      }
+    ],
+    "fields": {
+      "12": "someText"
+    }
+  },
+  "name": "Name",
+  "callback": "true/false",
+  "funnel": "funnel_id",
+  "lead_date": "lead_create_date",
+  "deal_date": "deal_date",
+  "view_id": 123,
+  "view": {
+    "source": "someSource",
+    "campaign": "someCampaign",
+    "keyword": "someKeyword"
+  },
+  "custom": {
+    "custom_field_id": "custom_field_value"
+  },
+  "payments": [
+    {
+      "category": "someCategory",
+      "purpose": "paymentPurpose",
+      "sum": 123.12
+    }
+  ],
+  "owner": "lead_owner_id"
+}
+Описание полей
+contact_id (Обязательное) - ID контакта (вернее, person_id)
+contact - Данные контакта. (Можно указать вместо contact_id)
+name - Имя лида
+callback - Заказать обратный звонок (звонок начнётся сразу после создания лида)
+funnel - ID шага воронки
+lead_date - Дата создания/регистрации лида. Формат d.m.Y H:i (23.12.2017 15:47)
+deal_date - Дата платежа. Формат d.m.Y H:i (23.12.2017 15:47). Будет выставленно только если будет передан хотя бы один платёж
+view_id - ID просмотра
+view - Данные просмотра. (Можно указать вместо view_id)
+custom - Массив данных, которые необходимо записать в соответствующие кастомные поля
+custom_field_id - ID кастомного поля
+custom_field_value - Значение, которое необходимо записать в поле
+owner - Владелец лида (если значение "0", то владельцем становится главный аккаунт)
+payments - Платежи лида (всегда передаётся массивом). При наличии платежей - лид попадёт в раздел сделки. Так же если не задан funnel - шаг будет выставлен "Оплата".
+category - Категория платежа
+purpose - Назначение платежа
+sum - Сумма платежа
+Создать лид с шагом "Оплата" без платежей невозможно
+
+Пример запроса
+curl -H 'Content-Type: application/json' \
+    -H 'token: someToken' \
+    -X POST \
+    -d '{"contact_id": 12345, "name": "TestLead", "callback": false, "source": "Api", "campaign": "CampaignName", "keyword": "keywordName", "funnel": 123}}' \
+    https://direct.lptracker.ru/lead
+Пример ответа при успешном выполнении:
+
+{
+  "status": "success",
+  "result": {
+    "id": 1234,
+    "contact_id": 12345,
+    "name": "TestLead",
+    "view": {
+      "id": 43,
+      "source": "Api",
+      "campaign": "CampaignName",
+      "keyword": "keywordName"
+    },
+    "custom": [
+      {
+        "id": 124,
+        "name": "Владелец заявки",
+        "type": "owner",
+        "value": {
+          "id": 100,
+          "type": "main"
+        }
+      },
+      {
+        "id": 125,
+        "name": "Шаг воронки",
+        "type": "funnel",
+        "value": "123"
+      }
+    ],
+    "contact": {
+      "id": 12345,
+      "project_id": 123,
+      "name": "Алексей",
+      "profession": "Менеджер",
+      "details": [
+        {
+          "id": "10",
+          "type": "email",
+          "data": "email@example.com"
+        }
+      ],
+      "created_at": "13.05.17 01:08:14"
+    }
+  }
+}
+В ответе поле view может быть null - показ будет создан позднее
