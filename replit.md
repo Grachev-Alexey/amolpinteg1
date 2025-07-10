@@ -31,6 +31,18 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 - ✓ Application now running successfully on port 5000
 - ✓ Migration completed successfully
 
+**July 10, 2025 - User Interface and Architecture Improvements**
+- ✓ Fixed dark theme CSS for better text readability across all components
+- ✓ Removed "Интеграции" tab from admin sidebar (unnecessary for superuser)
+- ✓ Created AdminMonitoring page with real-time system health data
+- ✓ Added API endpoints for system monitoring (/api/admin/system-health, /api/admin/recent-activity, /api/admin/integration-status)
+- ✓ Fixed AdminSidebar styling to use proper CSS variables for dark theme
+- ✓ Corrected logout button functionality in admin panel (fixed API call format)
+- ✓ Enhanced DataTable component with better contrast and boolean value display
+- ✓ Updated admin statistics to show real integration and event counts
+- ✓ Improved text contrast in admin dashboard and other components
+- ✓ LPTracker architecture already supports project ID per user (no changes needed)
+
 **July 9, 2025 - Code Cleanup and Optimization**
 - ✓ Removed 28 unused UI components (accordion, alert-dialog, avatar, etc.)
 - ✓ Eliminated all debug console.log statements (except error logging)

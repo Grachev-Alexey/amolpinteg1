@@ -18,7 +18,7 @@ export default function AdminSidebar() {
   const queryClient = useQueryClient();
 
   const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("/api/logout", "POST"),
+    mutationFn: () => apiRequest("POST", "/api/logout"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       window.location.href = "/auth";
@@ -60,12 +60,12 @@ export default function AdminSidebar() {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
-      <div className="flex flex-col w-64 bg-gray-800">
-        <div className="flex items-center justify-center h-16 bg-gray-700">
+    <div className="flex h-screen bg-background text-foreground">
+      <div className="flex flex-col w-64 bg-card border-r border-border">
+        <div className="flex items-center justify-center h-16 bg-muted/50 border-b border-border">
           <div className="flex items-center space-x-2">
-            <Shield className="h-8 w-8 text-blue-500" />
-            <span className="text-xl font-bold">Admin Panel</span>
+            <Shield className="h-8 w-8 text-primary" />
+            <span className="text-xl font-bold text-foreground">Админ Панель</span>
           </div>
         </div>
         
@@ -76,8 +76,8 @@ export default function AdminSidebar() {
                 className={cn(
                   "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
                   item.active
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -87,10 +87,10 @@ export default function AdminSidebar() {
           ))}
         </nav>
 
-        <div className="border-t border-gray-700 p-4">
+        <div className="border-t border-border p-4">
           <button
             onClick={() => logoutMutation.mutate()}
-            className="flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors w-full"
+            className="flex items-center space-x-3 px-3 py-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors w-full"
             disabled={logoutMutation.isPending}
           >
             <LogOut className="h-5 w-5" />
