@@ -113,6 +113,17 @@ export default function RuleConstructor({
     retry: false,
   });
 
+  // Load available fields for AmoCRM and LPTracker with descriptions
+  const { data: amoCrmAvailableFields } = useQuery({
+    queryKey: ['/api/field-mapping/available-fields/amocrm'],
+    retry: false,
+  });
+
+  const { data: lpTrackerAvailableFields } = useQuery({
+    queryKey: ['/api/field-mapping/available-fields/lptracker'],
+    retry: false,
+  });
+
   // Extract pipelines and statuses from metadata
   const pipelines = pipelinesData?.data?._embedded?.pipelines || [];
   const allStatuses = pipelines.flatMap((pipeline: any) => 
@@ -228,28 +239,20 @@ export default function RuleConstructor({
     return [];
   };
 
-  // Dynamic target fields loading with descriptions
+  // Helper function to get target fields based on action type
   const getTargetFields = (actionType: string) => {
-    const targetCrm = actionType === 'sync_to_amocrm' ? 'amocrm' : 'lptracker';
-    
-    // Use React Query to fetch available fields with descriptions
-    const { data: availableFieldsData } = useQuery({
-      queryKey: [`/api/field-mapping/available-fields/${targetCrm}`],
-      enabled: !!actionType, // Only fetch when action type is selected
-      retry: false,
-    });
-
-    if (availableFieldsData) {
-      return availableFieldsData.map((field: any) => ({
-        id: field.id,
-        name: field.name,
-        type: field.type,
-        description: field.description
-      }));
-    }
-
-    // Fallback to old method while loading
     if (actionType === 'sync_to_amocrm') {
+      // Use available fields from API if loaded, otherwise fallback
+      if (amoCrmAvailableFields) {
+        return amoCrmAvailableFields.map((field: any) => ({
+          id: field.id,
+          name: field.name,
+          type: field.type,
+          description: field.description
+        }));
+      }
+      
+      // Enhanced fallback with new field types
       return [
         { id: 'name', name: 'Имя контакта', description: 'Имя контакта в CRM' },
         { id: 'phone', name: 'Телефон', description: 'Основной номер телефона' },
@@ -269,6 +272,17 @@ export default function RuleConstructor({
         }))
       ];
     } else if (actionType === 'sync_to_lptracker') {
+      // Use available fields from API if loaded, otherwise fallback
+      if (lpTrackerAvailableFields) {
+        return lpTrackerAvailableFields.map((field: any) => ({
+          id: field.id,
+          name: field.name,
+          type: field.type,
+          description: field.description
+        }));
+      }
+      
+      // Fallback
       return [
         { id: 'name', name: 'Имя лида', description: 'Имя лида в LPTracker' },
         { id: 'phone', name: 'Телефон', description: 'Номер телефона лида' },
