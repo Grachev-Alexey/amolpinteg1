@@ -33,7 +33,7 @@ export class AmoCrmService {
       }
 
       const data = await response.json();
-      return data && (data._embedded || data._links || Array.isArray(data));
+      return !!(data && (data._embedded || data._links || Array.isArray(data)));
     } catch (error) {
       console.error("AmoCRM connection test failed:", error);
       return false;

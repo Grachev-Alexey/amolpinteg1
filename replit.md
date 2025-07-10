@@ -10,6 +10,16 @@ Successfully migrated to Replit environment on 2025-01-10 with full database set
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (January 2025)
+
+**Migration from Replit Agent to Replit Environment** (January 10, 2025)
+- ✓ Fixed missing debugRoutes.ts file and import issues
+- ✓ Provisioned PostgreSQL database and ran Drizzle migrations
+- ✓ Resolved AmoCRM connection test bug where first attempt failed but second succeeded
+- ✓ Fixed boolean data type issue in AmoCRM service testConnection method
+- ✓ Application now runs cleanly on Replit with proper error handling
+- ✓ All dependencies properly installed and configured
+
 ## Recent Changes
 
 - **2025-01-10**: Migrated from Replit Agent to Replit environment
