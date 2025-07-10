@@ -734,9 +734,13 @@ export default function RuleConstructor({
                             // Получаем все маппинги
                             const mappings = action.fieldMappings ? Object.entries(action.fieldMappings) : [];
                             
-                            // Разделяем на временные и постоянные маппинги
+                            // Фильтруем только настроенные маппинги (исключаем временные и пустые)
+                            const validMappings = mappings.filter(([key, value]) => 
+                              key && key !== '' && !key.startsWith('temp_') && value && value !== ''
+                            );
+                            
+                            // Добавляем временные маппинги для редактирования
                             const tempMappings = mappings.filter(([key]) => key.startsWith('temp_'));
-                            const validMappings = mappings.filter(([key, value]) => key && key !== '' && !key.startsWith('temp_'));
                             
                             // Сортируем валидные маппинги по алфавиту
                             const sortedMappings = validMappings.sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
