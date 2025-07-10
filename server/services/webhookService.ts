@@ -553,7 +553,15 @@ export class WebhookService {
         // Получаем значение из исходных данных вебхука
         const sourceValue = this.getFieldValue(sourceField, eventData);
         
-        if (sourceValue !== undefined && sourceValue !== null) {
+        // Логируем попытку маппинга
+        this.logService.log(eventData.userId, 'info', `Попытка маппинга поля: ${sourceField} → ${targetField}`, { 
+          sourceField, 
+          targetField, 
+          sourceValue,
+          found: sourceValue !== undefined && sourceValue !== null && sourceValue !== ''
+        }, 'webhook');
+        
+        if (sourceValue !== undefined && sourceValue !== null && sourceValue !== '') {
           // Устанавливаем значение в целевое поле
           mappedData[targetField as string] = sourceValue;
           
@@ -562,6 +570,15 @@ export class WebhookService {
             sourceField, 
             targetField, 
             sourceValue 
+          }, 'webhook');
+        } else {
+          // Логируем пропущенное маппинг
+          this.logService.log(eventData.userId, 'warning', `Маппинг поля пропущен - значение не найдено: ${sourceField}`, { 
+            sourceField, 
+            targetField,
+            eventDataKeys: Object.keys(eventData),
+            leadCustomFields: eventData.leadDetails?.custom_fields_values?.map((f: any) => ({ id: f.field_id, name: f.field_name, value: f.values?.[0]?.value })),
+            contactCustomFields: eventData.contactsDetails?.[0]?.custom_fields_values?.map((f: any) => ({ id: f.field_id, name: f.field_name, value: f.values?.[0]?.value }))
           }, 'webhook');
         }
       }
@@ -602,6 +619,22 @@ export class WebhookService {
         const fieldId = fieldPath.replace('contact_field_', '');
         const contactField = eventData.contactsDetails?.[0]?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
         return contactField?.values?.[0]?.value || '';
+      }
+
+      // ВАЖНО: Если fieldPath это просто число или строка-число, то это ID кастомного поля
+      if (/^\d+$/.test(fieldPath)) {
+        const fieldId = fieldPath;
+        // Сначала ищем в сделке
+        const leadCustomField = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
+        if (leadCustomField) {
+          return leadCustomField.values?.[0]?.value || '';
+        }
+        // Потом в контакте
+        const contactCustomField = eventData.contactsDetails?.[0]?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
+        if (contactCustomField) {
+          return contactCustomField.values?.[0]?.value || '';
+        }
+        return '';
       }
 
       // Прямое обращение к полю
