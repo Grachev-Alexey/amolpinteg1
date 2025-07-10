@@ -167,13 +167,29 @@ export default function RuleConstructor({
         { id: 'email', name: 'Email' },
         { id: 'deal_name', name: 'Название сделки' },
         { id: 'price', name: 'Бюджет сделки' },
-        ...availableData.fields.map(field => ({
-          id: field.id,
-          name: field.name
+        ...leadsFields.map(field => ({
+          id: field.id?.toString() || '',
+          name: field.name || ''
+        })),
+        ...contactsFields.map(field => ({
+          id: field.id?.toString() || '',
+          name: field.name || ''
         }))
       ];
     } else if (rule.webhookSource === 'lptracker') {
-      return availableData.fields;
+      return [
+        { id: 'name', name: 'Имя лида' },
+        { id: 'phone', name: 'Телефон' },
+        { id: 'email', name: 'Email' },
+        ...lpTrackerContactFields.map(field => ({
+          id: field.id?.toString() || '',
+          name: field.name || ''
+        })),
+        ...lpTrackerCustomFields.map(field => ({
+          id: field.id?.toString() || '',
+          name: field.name || ''
+        }))
+      ];
     }
     return [];
   };
@@ -188,12 +204,12 @@ export default function RuleConstructor({
         { id: 'deal_name', name: 'Название сделки' },
         { id: 'price', name: 'Бюджет сделки' },
         ...leadsFields.map(field => ({
-          id: field.id,
-          name: field.name
+          id: field.id?.toString() || '',
+          name: field.name || ''
         })),
         ...contactsFields.map(field => ({
-          id: field.id,
-          name: field.name
+          id: field.id?.toString() || '',
+          name: field.name || ''
         }))
       ];
     } else if (actionType === 'sync_to_lptracker') {
@@ -202,12 +218,12 @@ export default function RuleConstructor({
         { id: 'phone', name: 'Телефон' },
         { id: 'email', name: 'Email' },
         ...lpTrackerContactFields.map(field => ({
-          id: field.id,
-          name: field.name
+          id: field.id?.toString() || '',
+          name: field.name || ''
         })),
         ...lpTrackerCustomFields.map(field => ({
-          id: field.id,
-          name: field.name
+          id: field.id?.toString() || '',
+          name: field.name || ''
         }))
       ];
     }
@@ -596,59 +612,83 @@ export default function RuleConstructor({
                             <div>Поле назначения</div>
                           </div>
                           
-                          {/* Динамический маппинг полей */}
-                          {(() => {
-                            const sourceFields = getSourceFields();
-                            const targetFields = getTargetFields(action.type);
-                            
-                            // Стандартные поля для маппинга
-                            const standardMappings = [
-                              { source: 'name', target: 'name', label: 'Имя' },
-                              { source: 'phone', target: 'phone', label: 'Телефон' },
-                              { source: 'email', target: 'email', label: 'Email' }
-                            ];
-                            
-                            return standardMappings.map((mapping) => {
-                              const sourceField = sourceFields.find(f => f.id === mapping.source);
-                              const targetField = targetFields.find(f => f.id === mapping.target);
-                              
-                              if (!sourceField || !targetField) return null;
-                              
-                              return (
-                                <div key={mapping.source} className="grid grid-cols-3 gap-2 items-center py-1">
-                                  <div className="text-sm">{sourceField.name}</div>
-                                  <div className="text-center">→</div>
-                                  <div className="text-sm">{targetField.name}</div>
-                                </div>
-                              );
-                            }).filter(Boolean);
-                          })()}
+                          {/* Базовые поля всегда синхронизируются */}
+                          <div className="grid grid-cols-3 gap-2 items-center py-1 bg-green-50 dark:bg-green-900/20 px-2 rounded">
+                            <div className="text-sm font-medium">name</div>
+                            <div className="text-center">→</div>
+                            <div className="text-sm font-medium">
+                              {action.type === 'sync_to_amocrm' ? 'Имя контакта' : 'Имя лида'}
+                            </div>
+                          </div>
                           
+                          <div className="grid grid-cols-3 gap-2 items-center py-1 bg-green-50 dark:bg-green-900/20 px-2 rounded">
+                            <div className="text-sm font-medium">phone</div>
+                            <div className="text-center">→</div>
+                            <div className="text-sm font-medium">Телефон</div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-2 items-center py-1 bg-green-50 dark:bg-green-900/20 px-2 rounded">
+                            <div className="text-sm font-medium">email</div>
+                            <div className="text-center">→</div>
+                            <div className="text-sm font-medium">Email</div>
+                          </div>
+
                           {/* Дополнительные поля для AmoCRM */}
-                          {action.type === 'sync_to_amocrm' && (() => {
-                            const targetFields = getTargetFields(action.type);
-                            const dealNameField = targetFields.find(f => f.id === 'deal_name');
-                            const priceField = targetFields.find(f => f.id === 'price');
-                            
-                            return (
-                              <>
-                                {dealNameField && (
-                                  <div className="grid grid-cols-3 gap-2 items-center py-1">
-                                    <div className="text-sm">deal_name</div>
-                                    <div className="text-center">→</div>
-                                    <div className="text-sm">{dealNameField.name}</div>
-                                  </div>
-                                )}
-                                {priceField && (
-                                  <div className="grid grid-cols-3 gap-2 items-center py-1">
-                                    <div className="text-sm">price</div>
-                                    <div className="text-center">→</div>
-                                    <div className="text-sm">{priceField.name}</div>
-                                  </div>
-                                )}
-                              </>
-                            );
-                          })()}
+                          {action.type === 'sync_to_amocrm' && (
+                            <>
+                              <div className="grid grid-cols-3 gap-2 items-center py-1 bg-blue-50 dark:bg-blue-900/20 px-2 rounded">
+                                <div className="text-sm font-medium">deal_name</div>
+                                <div className="text-center">→</div>
+                                <div className="text-sm font-medium">Название сделки</div>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 items-center py-1 bg-blue-50 dark:bg-blue-900/20 px-2 rounded">
+                                <div className="text-sm font-medium">price</div>
+                                <div className="text-center">→</div>
+                                <div className="text-sm font-medium">Бюджет сделки</div>
+                              </div>
+                            </>
+                          )}
+                          
+                          {/* Дополнительные поля из CRM */}
+                          {action.type === 'sync_to_amocrm' && contactsFields.length > 0 && (
+                            <>
+                              <div className="text-xs text-muted-foreground mt-3 mb-2">
+                                Дополнительные поля AmoCRM (при наличии в webhook):
+                              </div>
+                              {contactsFields.slice(0, 5).map((field) => (
+                                <div key={field.id} className="grid grid-cols-3 gap-2 items-center py-1 bg-muted/30 px-2 rounded">
+                                  <div className="text-sm text-muted-foreground">{field.code || field.name}</div>
+                                  <div className="text-center text-muted-foreground">→</div>
+                                  <div className="text-sm text-muted-foreground">{field.name}</div>
+                                </div>
+                              ))}
+                              {contactsFields.length > 5 && (
+                                <div className="text-xs text-muted-foreground">
+                                  и еще {contactsFields.length - 5} полей...
+                                </div>
+                              )}
+                            </>
+                          )}
+                          
+                          {action.type === 'sync_to_lptracker' && lpTrackerCustomFields.length > 0 && (
+                            <>
+                              <div className="text-xs text-muted-foreground mt-3 mb-2">
+                                Дополнительные поля LPTracker (при наличии в webhook):
+                              </div>
+                              {lpTrackerCustomFields.slice(0, 5).map((field) => (
+                                <div key={field.id} className="grid grid-cols-3 gap-2 items-center py-1 bg-muted/30 px-2 rounded">
+                                  <div className="text-sm text-muted-foreground">{field.name}</div>
+                                  <div className="text-center text-muted-foreground">→</div>
+                                  <div className="text-sm text-muted-foreground">{field.name}</div>
+                                </div>
+                              ))}
+                              {lpTrackerCustomFields.length > 5 && (
+                                <div className="text-xs text-muted-foreground">
+                                  и еще {lpTrackerCustomFields.length - 5} полей...
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
 
