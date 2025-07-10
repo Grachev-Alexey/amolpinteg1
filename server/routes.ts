@@ -569,13 +569,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let amoCrmActive = 0;
       let lpTrackerActive = 0;
       let webhooksProcessed = 0;
+      const userIntegrations = [];
 
       for (const user of allUsers) {
         const amoCrmSettings = await storage.getAmoCrmSettings(user.id);
         const lpTrackerSettings = await storage.getLpTrackerSettings(user.id);
         
         if (amoCrmSettings?.isActive) amoCrmActive++;
-        if (lpTrackerSettings?.isActive) lpTrackerActive++;
+        if (lpTrackerSettings?.projectId) lpTrackerActive++;
+
+        // Get detailed integration status for each user
+        let amoCrmStatus = 'disconnected';
+        let lpTrackerStatus = 'disconnected';
+        let webhookStatus = 'not_configured';
+
+        // Check AmoCRM connection status
+        if (amoCrmSettings?.subdomain && amoCrmSettings?.apiKey) {
+          amoCrmStatus = amoCrmSettings.isActive ? 'configured' : 'inactive';
+        }
+
+        // Check LPTracker connection status
+        if (lpTrackerSettings?.projectId) {
+          const globalSettings = await storage.getLpTrackerGlobalSettings();
+          if (globalSettings?.login && globalSettings?.password && globalSettings?.isActive) {
+            lpTrackerStatus = 'configured';
+            webhookStatus = 'configured'; // Assume webhook is configured if LPTracker is set up
+          }
+        }
+
+        userIntegrations.push({
+          userId: user.id,
+          username: user.username,
+          amoCrm: {
+            status: amoCrmStatus,
+            subdomain: amoCrmSettings?.subdomain || null,
+            hasApiKey: !!amoCrmSettings?.apiKey,
+            isActive: amoCrmSettings?.isActive || false
+          },
+          lpTracker: {
+            status: lpTrackerStatus,
+            projectId: lpTrackerSettings?.projectId || null,
+            webhookStatus: webhookStatus
+          }
+        });
       }
 
       // Get webhook count from logs
@@ -591,11 +627,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         amoCrmActive,
         lpTrackerActive,
-        webhooksProcessed
+        webhooksProcessed,
+        totalUsers: allUsers.length,
+        userIntegrations
       });
     } catch (error) {
       console.error("Error fetching integration status:", error);
       res.status(500).json({ message: "Не удалось получить статус интеграций" });
+    }
+  });
+
+  // API endpoint for webhook status monitoring
+  app.get('/api/admin/webhook-status', requireSuperuser, async (req: any, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      const webhooks = [];
+
+      for (const user of allUsers) {
+        const lpTrackerSettings = await storage.getLpTrackerSettings(user.id);
+        
+        if (lpTrackerSettings?.projectId) {
+          // Get recent webhook activity from logs
+          const logs = await storage.getSystemLogs();
+          const userLogs = logs.filter(log => 
+            log.userId === user.id && 
+            log.source === 'webhook' &&
+            log.createdAt && 
+            new Date(log.createdAt).getTime() > Date.now() - 24 * 60 * 60 * 1000
+          );
+
+          const lastActivity = userLogs.length > 0 
+            ? Math.max(...userLogs.map(log => new Date(log.createdAt!).getTime()))
+            : null;
+
+          webhooks.push({
+            username: user.username,
+            projectId: lpTrackerSettings.projectId,
+            status: lpTrackerSettings.projectId ? 'configured' : 'not_configured',
+            activityCount: userLogs.length,
+            lastActivity: lastActivity ? new Date(lastActivity).toISOString() : null
+          });
+        }
+      }
+
+      res.json({ webhooks });
+    } catch (error) {
+      console.error("Error fetching webhook status:", error);
+      res.status(500).json({ message: "Не удалось получить статус вебхуков" });
+    }
+  });
+
+  // API endpoint for testing user integrations
+  app.post('/api/admin/test-user-integrations', requireSuperuser, async (req: any, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "userId обязателен" });
+      }
+
+      const results = {
+        amoCrm: { success: false, message: "Не настроено" },
+        lpTracker: { success: false, message: "Не настроено" }
+      };
+
+      // Test AmoCRM connection
+      const amoCrmSettings = await storage.getAmoCrmSettings(userId);
+      if (amoCrmSettings?.subdomain && amoCrmSettings?.apiKey) {
+        try {
+          const testResult = await amoCrmService.testConnection(amoCrmSettings.subdomain, amoCrmSettings.apiKey);
+          results.amoCrm = {
+            success: testResult,
+            message: testResult ? "Подключение успешно" : "Ошибка подключения"
+          };
+        } catch (error) {
+          results.amoCrm = { success: false, message: "Ошибка тестирования" };
+        }
+      }
+
+      // Test LPTracker connection
+      const lpTrackerSettings = await storage.getLpTrackerSettings(userId);
+      const globalSettings = await storage.getLpTrackerGlobalSettings();
+      
+      if (lpTrackerSettings?.projectId && globalSettings?.login && globalSettings?.password) {
+        try {
+          const testResult = await lpTrackerService.testConnection(globalSettings.login, globalSettings.password);
+          results.lpTracker = {
+            success: testResult,
+            message: testResult ? "Подключение успешно" : "Ошибка подключения"
+          };
+        } catch (error) {
+          results.lpTracker = { success: false, message: "Ошибка тестирования" };
+        }
+      }
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error testing user integrations:", error);
+      res.status(500).json({ message: "Не удалось протестировать интеграции" });
     }
   });
 
@@ -887,6 +1016,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error setting up LPTracker webhook:', error);
       res.status(500).json({ success: false, message: 'Ошибка при установке webhook' });
+    }
+  });
+
+  // Get detailed webhook status for admin
+  app.get('/api/admin/webhook-status', requireSuperuser, async (req: any, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      const webhookStatuses = [];
+
+      for (const user of allUsers) {
+        const lpTrackerSettings = await storage.getLpTrackerSettings(user.id);
+        
+        if (lpTrackerSettings?.projectId) {
+          // Check recent webhook activity for this user
+          const recentLogs = await storage.getSystemLogs(user.id);
+          const webhookActivity = recentLogs.filter(log => 
+            log.source === 'webhook' && 
+            new Date(log.createdAt).getTime() > Date.now() - 24 * 60 * 60 * 1000
+          );
+
+          const lastWebhookActivity = webhookActivity.length > 0 ? 
+            webhookActivity[0].createdAt : null;
+
+          webhookStatuses.push({
+            userId: user.id,
+            username: user.username,
+            projectId: lpTrackerSettings.projectId,
+            lastActivity: lastWebhookActivity,
+            activityCount: webhookActivity.length,
+            status: webhookActivity.length > 0 ? 'active' : 'inactive'
+          });
+        }
+      }
+
+      res.json({ webhooks: webhookStatuses });
+    } catch (error) {
+      console.error("Error fetching webhook status:", error);
+      res.status(500).json({ message: "Не удалось получить статус вебхуков" });
+    }
+  });
+
+  // Test specific user's integrations for admin
+  app.post('/api/admin/test-user-integrations', requireSuperuser, async (req: any, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+      }
+
+      const results = {
+        userId,
+        amoCrm: { status: 'not_configured', message: '' },
+        lpTracker: { status: 'not_configured', message: '' }
+      };
+
+      // Test AmoCRM
+      const amoCrmSettings = await storage.getAmoCrmSettings(userId);
+      if (amoCrmSettings?.subdomain && amoCrmSettings?.apiKey) {
+        try {
+          const testResult = await amoCrmService.testConnection(amoCrmSettings.subdomain, amoCrmSettings.apiKey);
+          results.amoCrm = {
+            status: testResult ? 'connected' : 'error',
+            message: testResult ? 'Подключение успешно' : 'Ошибка подключения'
+          };
+        } catch (error) {
+          results.amoCrm = {
+            status: 'error',
+            message: error.message || 'Ошибка тестирования AmoCRM'
+          };
+        }
+      }
+
+      // Test LPTracker
+      const lpTrackerSettings = await storage.getLpTrackerSettings(userId);
+      if (lpTrackerSettings?.projectId) {
+        try {
+          const globalSettings = await storage.getLpTrackerGlobalSettings();
+          if (globalSettings?.login && globalSettings?.password) {
+            const testResult = await lpTrackerService.testConnection(globalSettings.login, globalSettings.password, globalSettings.address);
+            results.lpTracker = {
+              status: testResult ? 'connected' : 'error',
+              message: testResult ? 'Подключение успешно' : 'Ошибка подключения'
+            };
+          } else {
+            results.lpTracker = {
+              status: 'error',
+              message: 'Глобальные настройки LPTracker не сконфигурированы'
+            };
+          }
+        } catch (error) {
+          results.lpTracker = {
+            status: 'error',
+            message: error.message || 'Ошибка тестирования LPTracker'
+          };
+        }
+      }
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error testing user integrations:", error);
+      res.status(500).json({ message: "Не удалось протестировать интеграции пользователя" });
     }
   });
 
