@@ -160,7 +160,8 @@ export class LpTrackerService {
     try {
       const baseUrl = `https://${address}`;
       
-      const response = await fetch(`${baseUrl}/login`, {
+      // First, test authentication by getting a token
+      const authResponse = await fetch(`${baseUrl}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,29 +174,55 @@ export class LpTrackerService {
         }),
       });
 
-      if (!response.ok) {
-        await this.logService.error(undefined, `LPTracker connection test failed: ${response.status}`, { login, address });
+      if (!authResponse.ok) {
+        await this.logService.error(undefined, `LPTracker connection test failed: ${authResponse.status}`, { login, address });
         return false;
       }
 
-      const result = await response.json();
+      const authResult = await authResponse.json();
       
       // Check if the response contains a token according to LPTracker API documentation
-      if (result.status === 'success' && result.result?.token) {
-        await this.logService.info(undefined, 'LPTracker connection test successful', { login, address });
+      if (authResult.status !== 'success' || !authResult.result?.token) {
+        await this.logService.error(undefined, 'LPTracker connection test failed: Invalid auth response', { login, address, response: authResult });
+        return false;
+      }
+
+      const token = authResult.result.token;
+
+      // Test the token by getting projects list
+      const projectsResponse = await fetch(`${baseUrl}/projects`, {
+        method: 'GET',
+        headers: {
+          'token': token,
+        },
+      });
+
+      if (!projectsResponse.ok) {
+        await this.logService.error(undefined, `LPTracker projects test failed: ${projectsResponse.status}`, { login, address });
+        return false;
+      }
+
+      const projectsResult = await projectsResponse.json();
+      
+      if (projectsResult.status === 'success') {
+        await this.logService.info(undefined, 'LPTracker connection test successful', { 
+          login, 
+          address, 
+          projectsCount: projectsResult.result?.length || 0 
+        });
         
         // Save the token for future use
         const globalSettings = await this.storage.getLpTrackerGlobalSettings();
         if (globalSettings) {
           await this.storage.updateLpTrackerGlobalSettings({
-            token: result.result.token,
+            token: token,
             isActive: true
           });
         }
         
         return true;
       } else {
-        await this.logService.error(undefined, 'LPTracker connection test failed: Invalid response', { login, address, response: result });
+        await this.logService.error(undefined, 'LPTracker connection test failed: Invalid projects response', { login, address, response: projectsResult });
         return false;
       }
     } catch (error) {
@@ -252,12 +279,11 @@ export class LpTrackerService {
       const token = await this.getAuthToken(globalSettings);
       const baseUrl = `https://${globalSettings.address}`;
 
-      // Get projects list
+      // Get projects list using correct LPTracker API endpoint
       try {
-        const projectsResponse = await fetch(`${baseUrl}/getProjectList`, {
-          method: 'POST',
+        const projectsResponse = await fetch(`${baseUrl}/projects`, {
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'token': token,
           },
         });
@@ -269,38 +295,57 @@ export class LpTrackerService {
             type: 'projects',
             data: projects
           });
+          await this.logService.info(userId, 'Проекты LPTracker загружены', { projectsCount: projects.result?.length || 0 }, 'metadata');
+        } else {
+          const errorText = await projectsResponse.text();
+          await this.logService.warning(userId, `Failed to fetch LPTracker projects: ${projectsResponse.status}`, { error: errorText }, 'metadata');
         }
       } catch (error) {
-        console.warn('Failed to fetch LPTracker projects:', error);
+        await this.logService.error(userId, 'Failed to fetch LPTracker projects', { error: error.message }, 'metadata');
       }
 
-      // Get leads structure (try to get sample lead data)
+      // Get project fields and funnel information for metadata
       try {
         const userSettings = await this.storage.getLpTrackerSettings(userId);
         if (userSettings?.projectId) {
-          const leadsResponse = await fetch(`${baseUrl}/getLeadData`, {
-            method: 'POST',
+          // Get project custom fields
+          const fieldsResponse = await fetch(`${baseUrl}/project/${userSettings.projectId}/custom`, {
+            method: 'GET',
             headers: {
-              'Content-Type': 'application/json',
               'token': token,
             },
-            body: JSON.stringify({
-              project_id: userSettings.projectId,
-              limit: 1
-            }),
           });
 
-          if (leadsResponse.ok) {
-            const leads = await leadsResponse.json();
+          if (fieldsResponse.ok) {
+            const fields = await fieldsResponse.json();
             await this.storage.saveLpTrackerMetadata({
               userId,
-              type: 'leads',
-              data: leads
+              type: 'fields',
+              data: fields
             });
+            await this.logService.info(userId, 'Поля проекта LPTracker загружены', { fieldsCount: fields.result?.length || 0 }, 'metadata');
+          }
+
+          // Get funnel steps
+          const funnelResponse = await fetch(`${baseUrl}/project/${userSettings.projectId}/funnel`, {
+            method: 'GET',
+            headers: {
+              'token': token,
+            },
+          });
+
+          if (funnelResponse.ok) {
+            const funnel = await funnelResponse.json();
+            await this.storage.saveLpTrackerMetadata({
+              userId,
+              type: 'funnel',
+              data: funnel
+            });
+            await this.logService.info(userId, 'Воронка проекта LPTracker загружена', { stepsCount: funnel.result?.length || 0 }, 'metadata');
           }
         }
       } catch (error) {
-        console.warn('Failed to fetch LPTracker leads:', error);
+        await this.logService.error(userId, 'Failed to fetch LPTracker project metadata', { error: error.message }, 'metadata');
       }
 
       await this.logService.log(userId, 'info', 'Метаданные LPTracker обновлены', {}, 'metadata');
@@ -320,10 +365,9 @@ export class LpTrackerService {
       const token = await this.getAuthToken(globalSettings);
       const baseUrl = `https://${globalSettings.address}`;
 
-      const response = await fetch(`${baseUrl}/getProjectList`, {
-        method: 'POST',
+      const response = await fetch(`${baseUrl}/projects`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'token': token,
         },
       });

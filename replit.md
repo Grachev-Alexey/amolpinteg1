@@ -6,7 +6,13 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 ## Recent Changes
 
-**July 10, 2025 - LPTracker Architecture & Database Fix**
+**July 10, 2025 - LPTracker API Integration Fixed**
+- ✓ Fixed critical bug in LPTracker API endpoints - now uses correct LPTracker API documentation
+- ✓ Updated LPTracker service to use proper endpoints: POST /login for auth, GET /projects for project list
+- ✓ Fixed token-based authentication with proper header usage according to LPTracker docs
+- ✓ LPTracker metadata now loads correctly: projects and funnel steps (19 steps loaded)
+- ✓ Improved connection testing with two-step validation (auth + projects test)
+- ✓ Added comprehensive logging for LPTracker operations and metadata extraction
 - ✓ Fixed critical bug in saveLpTrackerGlobalSettings function - now properly updates existing settings instead of creating duplicates
 - ✓ Added token field to lpTrackerGlobalSettings database schema for proper authentication token storage
 - ✓ Updated LPTracker service to use cached tokens and only refresh when needed
