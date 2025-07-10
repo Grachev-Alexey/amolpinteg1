@@ -8,7 +8,8 @@ import {
   Activity, 
   Shield,
   LogOut,
-  Database
+  Database,
+  Webhook
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -50,6 +51,12 @@ export default function AdminSidebar() {
       label: "Интеграции",
       href: "/admin/integrations",
       active: location === "/admin/integrations",
+    },
+    {
+      icon: Webhook,
+      label: "Вебхуки",
+      href: "/admin/webhooks",
+      active: location === "/admin/webhooks",
     },
     {
       icon: Settings,
