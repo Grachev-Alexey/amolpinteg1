@@ -25,6 +25,16 @@ export default function Home() {
     retry: false,
   });
 
+  const { data: amoCrmSettings } = useQuery({
+    queryKey: ["/api/amocrm/settings"],
+    retry: false,
+  });
+
+  const { data: lpTrackerStatus } = useQuery({
+    queryKey: ["/api/lptracker/status"],
+    retry: false,
+  });
+
   if (isLoading || statsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -65,30 +75,50 @@ export default function Home() {
         <Card className="hover-lift transition-all">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-green-500" />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                amoCrmSettings?.isActive ? 'bg-green-500/20' : 'bg-red-500/20'
+              }`}>
+                {amoCrmSettings?.isActive ? (
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                )}
               </div>
-              <Badge variant="secondary" className="status-indicator status-connected">
-                Подключено
+              <Badge variant="secondary" className={`status-indicator ${
+                amoCrmSettings?.isActive ? 'status-connected' : 'status-disconnected'
+              }`}>
+                {amoCrmSettings?.isActive ? 'Подключено' : 'Не подключено'}
               </Badge>
             </div>
             <CardTitle className="text-lg">AmoCRM</CardTitle>
-            <CardDescription>Последняя синхронизация: 2 мин назад</CardDescription>
+            <CardDescription>
+              {amoCrmSettings?.isActive ? 'Интеграция активна' : 'Требуется настройка'}
+            </CardDescription>
           </CardHeader>
         </Card>
 
         <Card className="hover-lift transition-all">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-yellow-500" />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                lpTrackerStatus?.connected ? 'bg-green-500/20' : 'bg-yellow-500/20'
+              }`}>
+                {lpTrackerStatus?.connected ? (
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                ) : (
+                  <Clock className="w-5 h-5 text-yellow-500" />
+                )}
               </div>
-              <Badge variant="secondary" className="status-indicator status-pending">
-                Настройка
+              <Badge variant="secondary" className={`status-indicator ${
+                lpTrackerStatus?.connected ? 'status-connected' : 'status-pending'
+              }`}>
+                {lpTrackerStatus?.connected ? 'Подключено' : 'Настройка'}
               </Badge>
             </div>
             <CardTitle className="text-lg">LPTracker</CardTitle>
-            <CardDescription>Требуется настройка</CardDescription>
+            <CardDescription>
+              {lpTrackerStatus?.connected ? 'Интеграция активна' : 'Требуется настройка'}
+            </CardDescription>
           </CardHeader>
         </Card>
 
