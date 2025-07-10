@@ -9,6 +9,16 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### Smart Field Mapper Improvements (July 10, 2025)
+- ✓ Fixed hardcoded field IDs for phone (449213) and email (449215) in AmoCRM integration
+- ✓ Added dynamic field ID resolution using CRM metadata
+- ✓ Implemented `findStandardFieldId` method to lookup proper field IDs from metadata
+- ✓ Removed hardcoded field ID range assumptions that were incorrect for different users
+- ✓ System now properly uses individual user's CRM metadata for field mapping
+- ✓ Added comprehensive logging for field mapping operations
+
 
 ## System Architecture
 
