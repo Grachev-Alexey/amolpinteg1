@@ -1,13 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { handleUnauthorizedError } from "@/lib/authRedirect";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthRedirect } from "@/lib/auth";
+
 import { apiRequest } from "@/lib/queryClient";
 import DataTable from "@/components/DataTable";
 import { 
@@ -22,8 +21,8 @@ import {
 } from "lucide-react";
 
 export default function FileUpload() {
+  useAuthRedirect();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -62,10 +61,6 @@ export default function FileUpload() {
       setSelectedFiles([]);
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        handleUnauthorizedError(error, toast);
-        return;
-      }
       toast({
         title: "Ошибка загрузки",
         description: "Не удалось загрузить файл",
@@ -73,21 +68,6 @@ export default function FileUpload() {
       });
     },
   });
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Необходима авторизация",
-        description: "Выполняется перенаправление на страницу входа...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

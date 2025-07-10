@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useAuthRedirect } from "@/lib/authRedirect";
+import { useAuthRedirect } from "@/lib/auth";
 import { 
   Activity, 
   TrendingUp, 

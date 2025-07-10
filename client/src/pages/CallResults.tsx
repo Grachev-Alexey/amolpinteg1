@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { useAuthRedirect, handleUnauthorizedError } from "@/lib/authRedirect";
+
+import { useAuthRedirect } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
 import DataTable from "@/components/DataTable";
 import { 
@@ -26,8 +26,8 @@ import {
 } from "lucide-react";
 
 export default function CallResults() {
+  useAuthRedirect();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuthRedirect();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -70,10 +70,6 @@ export default function CallResults() {
       });
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        handleUnauthorizedError(error, toast);
-        return;
-      }
       toast({
         title: "Ошибка",
         description: "Не удалось добавить результат прозвона",

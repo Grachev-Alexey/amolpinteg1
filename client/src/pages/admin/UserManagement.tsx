@@ -194,6 +194,28 @@ export default function UserManagement() {
       ),
     },
     {
+      key: 'lptracker_project',
+      label: 'LPTracker ID',
+      render: (value: any, row: any) => (
+        <div className="flex items-center gap-2">
+          {row.role !== "superuser" && (
+            <>
+              <span className="text-sm text-foreground">
+                {getUserLpTrackerSettings(row.id)?.projectId || "—"}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditingLpTracker(row)}
+              >
+                <Zap className="h-3 w-3" />
+              </Button>
+            </>
+          )}
+        </div>
+      ),
+    },
+    {
       key: 'createdAt',
       label: 'Дата регистрации',
       sortable: true,

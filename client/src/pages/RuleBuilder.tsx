@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { handleUnauthorizedError } from "@/lib/authRedirect";
-import { useAuth } from "@/hooks/useAuth";
+
+
+import { useAuthRedirect } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
 import RuleConstructor from "@/components/RuleConstructor";
 import DataTable from "@/components/DataTable";
 import { Plus, Edit, Play, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 
 export default function RuleBuilder() {
+  useAuthRedirect();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const [showConstructor, setShowConstructor] = useState(false);
   const [editingRule, setEditingRule] = useState<any>(null);
@@ -101,13 +101,7 @@ export default function RuleBuilder() {
     },
   });
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      handleUnauthorizedError(null, toast);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
+
 
   const handleCreateRule = (rule: any) => {
     createRuleMutation.mutate(rule);

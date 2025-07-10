@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DataTable from "@/components/DataTable";
 import WebhookManager from "@/components/WebhookManager";
 import { useToast } from "@/hooks/use-toast";
-import { useAuthRedirect } from "@/lib/authRedirect";
+import { useAuthRedirect } from "@/lib/auth";
 import {
   Activity,
   Users,

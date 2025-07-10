@@ -1,6 +1,21 @@
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+
+export function useAuth() {
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["/api/user"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
+  });
+
+  return {
+    user,
+    isLoading,
+    isAuthenticated: !!user,
+  };
+}
 
 export function useAuthRedirect() {
   const { toast } = useToast();
@@ -20,15 +35,4 @@ export function useAuthRedirect() {
   }, [isAuthenticated, isLoading, toast]);
 
   return { isAuthenticated, isLoading };
-}
-
-export function handleUnauthorizedError(error: any, toast: any) {
-  toast({
-    title: "Необходима авторизация",
-    description: "Выполняется перенаправление на страницу входа...",
-    variant: "destructive",
-  });
-  setTimeout(() => {
-    window.location.href = "/auth";
-  }, 500);
 }
