@@ -279,51 +279,52 @@ export class LpTrackerService {
       const token = await this.getAuthToken(globalSettings);
       const baseUrl = `https://${globalSettings.address}`;
 
-      // Get projects list using correct LPTracker API endpoint
-      try {
-        const projectsResponse = await fetch(`${baseUrl}/projects`, {
-          method: 'GET',
-          headers: {
-            'token': token,
-          },
-        });
+      // Skip projects loading - we don't need project metadata, just fields and funnel info
 
-        if (projectsResponse.ok) {
-          const projects = await projectsResponse.json();
-          await this.storage.saveLpTrackerMetadata({
-            userId,
-            type: 'projects',
-            data: projects
-          });
-          await this.logService.info(userId, 'Проекты LPTracker загружены', { projectsCount: projects.result?.length || 0 }, 'metadata');
-        } else {
-          const errorText = await projectsResponse.text();
-          await this.logService.warning(userId, `Failed to fetch LPTracker projects: ${projectsResponse.status}`, { error: errorText }, 'metadata');
-        }
-      } catch (error) {
-        await this.logService.error(userId, 'Failed to fetch LPTracker projects', { error: error.message }, 'metadata');
-      }
-
-      // Get project fields and funnel information for metadata
+      // Get contact fields and custom fields metadata for the user's project
       try {
         const userSettings = await this.storage.getLpTrackerSettings(userId);
         if (userSettings?.projectId) {
-          // Get project custom fields
-          const fieldsResponse = await fetch(`${baseUrl}/project/${userSettings.projectId}/custom`, {
+          // Get contact fields 
+          const contactFieldsResponse = await fetch(`${baseUrl}/project/${userSettings.projectId}/fields`, {
             method: 'GET',
             headers: {
               'token': token,
             },
           });
 
-          if (fieldsResponse.ok) {
-            const fields = await fieldsResponse.json();
+          if (contactFieldsResponse.ok) {
+            const contactFields = await contactFieldsResponse.json();
             await this.storage.saveLpTrackerMetadata({
               userId,
-              type: 'fields',
-              data: fields
+              type: 'contact_fields',
+              data: contactFields
             });
-            await this.logService.info(userId, 'Поля проекта LPTracker загружены', { fieldsCount: fields.result?.length || 0 }, 'metadata');
+            await this.logService.info(userId, 'Поля контактов LPTracker загружены', { fieldsCount: contactFields.result?.length || 0 }, 'metadata');
+          } else {
+            const errorText = await contactFieldsResponse.text();
+            await this.logService.warning(userId, `Failed to fetch contact fields: ${contactFieldsResponse.status}`, { error: errorText }, 'metadata');
+          }
+
+          // Get custom fields
+          const customFieldsResponse = await fetch(`${baseUrl}/project/${userSettings.projectId}/customs`, {
+            method: 'GET',
+            headers: {
+              'token': token,
+            },
+          });
+
+          if (customFieldsResponse.ok) {
+            const customFields = await customFieldsResponse.json();
+            await this.storage.saveLpTrackerMetadata({
+              userId,
+              type: 'custom_fields',
+              data: customFields
+            });
+            await this.logService.info(userId, 'Кастомные поля LPTracker загружены', { fieldsCount: customFields.result?.length || 0 }, 'metadata');
+          } else {
+            const errorText = await customFieldsResponse.text();
+            await this.logService.warning(userId, `Failed to fetch custom fields: ${customFieldsResponse.status}`, { error: errorText }, 'metadata');
           }
 
           // Get funnel steps
@@ -342,7 +343,12 @@ export class LpTrackerService {
               data: funnel
             });
             await this.logService.info(userId, 'Воронка проекта LPTracker загружена', { stepsCount: funnel.result?.length || 0 }, 'metadata');
+          } else {
+            const errorText = await funnelResponse.text();
+            await this.logService.warning(userId, `Failed to fetch funnel: ${funnelResponse.status}`, { error: errorText }, 'metadata');
           }
+        } else {
+          await this.logService.warning(userId, 'LPTracker project ID not configured for user', {}, 'metadata');
         }
       } catch (error) {
         await this.logService.error(userId, 'Failed to fetch LPTracker project metadata', { error: error.message }, 'metadata');
@@ -352,6 +358,50 @@ export class LpTrackerService {
     } catch (error) {
       await this.logService.log(userId, 'error', 'Ошибка при обновлении метаданных LPTracker', { error }, 'metadata');
       throw error;
+    }
+  }
+
+  async setupWebhook(userId: string, webhookUrl: string): Promise<boolean> {
+    try {
+      const userSettings = await this.storage.getLpTrackerSettings(userId);
+      if (!userSettings?.projectId) {
+        throw new Error('LPTracker project settings not found');
+      }
+
+      const globalSettings = await this.storage.getLpTrackerGlobalSettings();
+      if (!globalSettings) {
+        throw new Error('LPTracker global settings not configured');
+      }
+
+      const token = await this.getAuthToken(globalSettings);
+      const baseUrl = `https://${globalSettings.address}`;
+
+      const response = await fetch(`${baseUrl}/project/${userSettings.projectId}/callback-url`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token,
+        },
+        body: JSON.stringify({ url: webhookUrl }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        await this.logService.error(userId, `Failed to setup LPTracker webhook: ${response.status}`, { error: errorText, webhookUrl }, 'webhook');
+        return false;
+      }
+
+      const result = await response.json();
+      if (result.status === 'success') {
+        await this.logService.info(userId, 'LPTracker webhook установлен', { webhookUrl, projectId: userSettings.projectId }, 'webhook');
+        return true;
+      } else {
+        await this.logService.error(userId, 'Failed to setup LPTracker webhook: Invalid response', { result, webhookUrl }, 'webhook');
+        return false;
+      }
+    } catch (error) {
+      await this.logService.error(userId, 'Error setting up LPTracker webhook', { error: error.message, webhookUrl }, 'webhook');
+      return false;
     }
   }
 

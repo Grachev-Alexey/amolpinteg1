@@ -867,6 +867,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Setup LPTracker webhook for a user
+  app.post('/api/lptracker/setup-webhook', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { webhookUrl } = req.body;
+      
+      if (!webhookUrl) {
+        return res.status(400).json({ message: 'Webhook URL is required' });
+      }
+      
+      const result = await lpTrackerService.setupWebhook(userId, webhookUrl);
+      
+      if (result) {
+        res.json({ success: true, message: 'Webhook установлен успешно' });
+      } else {
+        res.json({ success: false, message: 'Не удалось установить webhook' });
+      }
+    } catch (error) {
+      console.error('Error setting up LPTracker webhook:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при установке webhook' });
+    }
+  });
+
   app.get('/api/admin/system-settings', requireSuperuser, async (req: any, res) => {
     try {
       // Mock system settings - in real app these would be in database
