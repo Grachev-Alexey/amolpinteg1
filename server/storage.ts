@@ -258,6 +258,10 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(lpTrackerSettings)
       .where(eq(lpTrackerSettings.userId, userId));
+    
+    // Debug logging
+    console.log(`[DEBUG] getLpTrackerSettings for user ${userId}:`, settings);
+    
     return settings;
   }
 
