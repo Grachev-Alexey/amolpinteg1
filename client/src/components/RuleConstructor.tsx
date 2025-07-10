@@ -158,6 +158,62 @@ export default function RuleConstructor({
 
   const availableData = getAvailableFields();
 
+  // Helper function to get source fields based on webhook source
+  const getSourceFields = () => {
+    if (rule.webhookSource === 'amocrm') {
+      return [
+        { id: 'name', name: 'Имя контакта' },
+        { id: 'phone', name: 'Телефон' },
+        { id: 'email', name: 'Email' },
+        { id: 'deal_name', name: 'Название сделки' },
+        { id: 'price', name: 'Бюджет сделки' },
+        ...availableData.fields.map(field => ({
+          id: field.id,
+          name: field.name
+        }))
+      ];
+    } else if (rule.webhookSource === 'lptracker') {
+      return availableData.fields;
+    }
+    return [];
+  };
+
+  // Helper function to get target fields based on action type
+  const getTargetFields = (actionType: string) => {
+    if (actionType === 'sync_to_amocrm') {
+      return [
+        { id: 'name', name: 'Имя контакта' },
+        { id: 'phone', name: 'Телефон' },
+        { id: 'email', name: 'Email' },
+        { id: 'deal_name', name: 'Название сделки' },
+        { id: 'price', name: 'Бюджет сделки' },
+        ...leadsFields.map(field => ({
+          id: field.id,
+          name: field.name
+        })),
+        ...contactsFields.map(field => ({
+          id: field.id,
+          name: field.name
+        }))
+      ];
+    } else if (actionType === 'sync_to_lptracker') {
+      return [
+        { id: 'name', name: 'Имя лида' },
+        { id: 'phone', name: 'Телефон' },
+        { id: 'email', name: 'Email' },
+        ...lpTrackerContactFields.map(field => ({
+          id: field.id,
+          name: field.name
+        })),
+        ...lpTrackerCustomFields.map(field => ({
+          id: field.id,
+          name: field.name
+        }))
+      ];
+    }
+    return [];
+  };
+
   const addCondition = () => {
     const newCondition = {
       id: Date.now().toString(),
@@ -540,40 +596,59 @@ export default function RuleConstructor({
                             <div>Поле назначения</div>
                           </div>
                           
-                          {/* Основные поля */}
-                          <div className="grid grid-cols-3 gap-2 items-center py-1">
-                            <div className="text-sm">name</div>
-                            <div className="text-center">→</div>
-                            <div className="text-sm">{action.type === 'sync_to_amocrm' ? 'Имя контакта' : 'Имя лида'}</div>
-                          </div>
+                          {/* Динамический маппинг полей */}
+                          {(() => {
+                            const sourceFields = getSourceFields();
+                            const targetFields = getTargetFields(action.type);
+                            
+                            // Стандартные поля для маппинга
+                            const standardMappings = [
+                              { source: 'name', target: 'name', label: 'Имя' },
+                              { source: 'phone', target: 'phone', label: 'Телефон' },
+                              { source: 'email', target: 'email', label: 'Email' }
+                            ];
+                            
+                            return standardMappings.map((mapping) => {
+                              const sourceField = sourceFields.find(f => f.id === mapping.source);
+                              const targetField = targetFields.find(f => f.id === mapping.target);
+                              
+                              if (!sourceField || !targetField) return null;
+                              
+                              return (
+                                <div key={mapping.source} className="grid grid-cols-3 gap-2 items-center py-1">
+                                  <div className="text-sm">{sourceField.name}</div>
+                                  <div className="text-center">→</div>
+                                  <div className="text-sm">{targetField.name}</div>
+                                </div>
+                              );
+                            }).filter(Boolean);
+                          })()}
                           
-                          <div className="grid grid-cols-3 gap-2 items-center py-1">
-                            <div className="text-sm">phone</div>
-                            <div className="text-center">→</div>
-                            <div className="text-sm">Телефон</div>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-2 items-center py-1">
-                            <div className="text-sm">email</div>
-                            <div className="text-center">→</div>
-                            <div className="text-sm">Email</div>
-                          </div>
-
-                          {action.type === 'sync_to_amocrm' && (
-                            <div className="grid grid-cols-3 gap-2 items-center py-1">
-                              <div className="text-sm">deal_name</div>
-                              <div className="text-center">→</div>
-                              <div className="text-sm">Название сделки</div>
-                            </div>
-                          )}
-
-                          {action.type === 'sync_to_amocrm' && (
-                            <div className="grid grid-cols-3 gap-2 items-center py-1">
-                              <div className="text-sm">price</div>
-                              <div className="text-center">→</div>
-                              <div className="text-sm">Бюджет сделки</div>
-                            </div>
-                          )}
+                          {/* Дополнительные поля для AmoCRM */}
+                          {action.type === 'sync_to_amocrm' && (() => {
+                            const targetFields = getTargetFields(action.type);
+                            const dealNameField = targetFields.find(f => f.id === 'deal_name');
+                            const priceField = targetFields.find(f => f.id === 'price');
+                            
+                            return (
+                              <>
+                                {dealNameField && (
+                                  <div className="grid grid-cols-3 gap-2 items-center py-1">
+                                    <div className="text-sm">deal_name</div>
+                                    <div className="text-center">→</div>
+                                    <div className="text-sm">{dealNameField.name}</div>
+                                  </div>
+                                )}
+                                {priceField && (
+                                  <div className="grid grid-cols-3 gap-2 items-center py-1">
+                                    <div className="text-sm">price</div>
+                                    <div className="text-center">→</div>
+                                    <div className="text-sm">{priceField.name}</div>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
 
