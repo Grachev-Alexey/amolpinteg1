@@ -23,46 +23,108 @@ export class WebhookService {
         payload: payload
       });
       
+      // Извлекаем информацию о поддомене для идентификации клиента
+      const subdomain = payload['account[subdomain]'];
+      const accountId = payload['account[id]'];
+      
       await this.logService.log(undefined, 'info', 'AmoCRM Webhook - Детальный анализ', { 
+        subdomain,
+        accountId,
         payloadKeys: Object.keys(payload || {}),
         payloadType: typeof payload,
         payloadLength: JSON.stringify(payload).length,
         fullPayload: payload 
       }, 'webhook');
 
-      // Определяем тип события
-      const eventType = payload.type || payload.event_type || payload.event;
-      
-      console.log("AmoCRM Event Type detected:", eventType);
-      
-      if (!eventType) {
-        await this.logService.log(undefined, 'warning', 'AmoCRM - Неизвестный тип события', { 
-          payload,
-          possibleEventFields: {
-            type: payload.type,
-            event_type: payload.event_type,
-            event: payload.event
-          }
+      if (!subdomain) {
+        await this.logService.log(undefined, 'warning', 'AmoCRM Webhook без поддомена', { payload }, 'webhook');
+        return;
+      }
+
+      // Находим пользователя по поддомену
+      const userId = await this.findUserBySubdomain(subdomain);
+      if (!userId) {
+        await this.logService.log(undefined, 'warning', `AmoCRM - Пользователь не найден для поддомена: ${subdomain}`, { 
+          subdomain, payload 
         }, 'webhook');
         return;
       }
 
-      // Обработка различных типов событий
-      switch (eventType) {
-        case 'lead_status_changed':
-          await this.handleLeadStatusChanged(payload);
-          break;
-        case 'lead_created':
-          await this.handleLeadCreated(payload);
-          break;
-        case 'contact_created':
-          await this.handleContactCreated(payload);
-          break;
-        case 'contact_updated':
-          await this.handleContactUpdated(payload);
-          break;
-        default:
-          await this.logService.log(undefined, 'info', `Необработанный тип события: ${eventType}`, { payload }, 'webhook');
+      // Определяем тип события из структуры payload
+      let eventType = null;
+      let entityData = null;
+
+      // Проверяем на добавление сделки
+      if (payload['leads[add][0][id]']) {
+        eventType = 'lead_created';
+        entityData = {
+          id: payload['leads[add][0][id]'],
+          status_id: payload['leads[add][0][status_id]'],
+          pipeline_id: payload['leads[add][0][pipeline_id]']
+        };
+      }
+      // Проверяем на изменение статуса сделки
+      else if (payload['leads[status][0][id]']) {
+        eventType = 'lead_status_changed';
+        entityData = {
+          id: payload['leads[status][0][id]'],
+          status_id: payload['leads[status][0][status_id]'],
+          old_status_id: payload['leads[status][0][old_status_id]'],
+          pipeline_id: payload['leads[status][0][pipeline_id]']
+        };
+      }
+      // Проверяем на обновление сделки
+      else if (payload['leads[update][0][id]']) {
+        eventType = 'lead_updated';
+        entityData = {
+          id: payload['leads[update][0][id]'],
+          status_id: payload['leads[update][0][status_id]'],
+          pipeline_id: payload['leads[update][0][pipeline_id]']
+        };
+      }
+
+      console.log("AmoCRM Event Type detected:", eventType, "Data:", entityData);
+      
+      if (!eventType) {
+        await this.logService.log(undefined, 'warning', 'AmoCRM - Неизвестный тип события', { 
+          subdomain,
+          payload,
+          availableKeys: Object.keys(payload)
+        }, 'webhook');
+        return;
+      }
+
+      // Получаем полную информацию о сделке через API
+      if (entityData && entityData.id) {
+        try {
+          const leadDetails = await this.getLeadDetails(userId, entityData.id);
+          await this.logService.log(userId, 'info', `AmoCRM - Получена детальная информация о сделке ${entityData.id}`, { 
+            leadDetails,
+            eventType,
+            originalPayload: payload
+          }, 'webhook');
+
+          // Обработка различных типов событий с полными данными
+          switch (eventType) {
+            case 'lead_status_changed':
+              await this.handleLeadStatusChanged({...payload, userId, leadDetails, entityData});
+              break;
+            case 'lead_created':
+              await this.handleLeadCreated({...payload, userId, leadDetails, entityData});
+              break;
+            case 'lead_updated':
+              await this.handleLeadUpdated({...payload, userId, leadDetails, entityData});
+              break;
+            default:
+              await this.logService.log(userId, 'info', `Необработанный тип события: ${eventType}`, { 
+                payload, leadDetails, entityData 
+              }, 'webhook');
+          }
+        } catch (error) {
+          await this.logService.log(userId, 'error', `Ошибка получения данных сделки ${entityData.id}`, { 
+            error, entityData, eventType 
+          }, 'webhook');
+        }
       }
     } catch (error) {
       await this.logService.log(undefined, 'error', 'Ошибка при обработке webhook AmoCRM', { error, payload }, 'webhook');
@@ -116,47 +178,144 @@ export class WebhookService {
     }
   }
 
-  private async handleLeadStatusChanged(payload: any): Promise<void> {
+  // Вспомогательный метод для поиска пользователя по поддомену
+  private async findUserBySubdomain(subdomain: string): Promise<string | null> {
     try {
-      const leadId = payload.lead_id;
-      const newStatus = payload.status;
-      const userId = payload.user_id; // Предполагаем, что в payload есть user_id
+      // Получаем всех пользователей и проверяем их настройки AmoCRM
+      const { db } = await import('../db');
+      const { users } = await import('../../shared/schema');
+      const allUsers = await db.select().from(users);
+      
+      for (const user of allUsers) {
+        const amoCrmSettings = await this.storage.getAmoCrmSettings(user.id);
+        if (amoCrmSettings?.subdomain === subdomain) {
+          return user.id;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error finding user by subdomain:', error);
+      return null;
+    }
+  }
 
-      // Получаем правила пользователя
+  // Получение детальной информации о сделке через AmoCRM API
+  private async getLeadDetails(userId: string, leadId: string): Promise<any> {
+    try {
+      const amoCrmSettings = await this.storage.getAmoCrmSettings(userId);
+      if (!amoCrmSettings?.subdomain || !amoCrmSettings?.apiKey) {
+        throw new Error('AmoCRM настройки не найдены');
+      }
+
+      const url = `https://${amoCrmSettings.subdomain}.amocrm.ru/api/v4/leads/${leadId}?with=contacts,companies,catalog_elements,loss_reason,source`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${amoCrmSettings.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`AmoCRM API error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching lead details:', error);
+      throw error;
+    }
+  }
+
+  private async handleLeadStatusChanged(payload: any): Promise<void> {
+    const { userId, leadDetails, entityData } = payload;
+
+    await this.logService.log(userId, 'info', 'AmoCRM - Статус сделки изменен', { 
+      leadId: entityData.id,
+      newStatusId: entityData.status_id,
+      oldStatusId: entityData.old_status_id,
+      leadDetails,
+      entityData
+    }, 'webhook');
+
+    try {
       const rules = await this.storage.getSyncRules(userId);
       const applicableRules = rules.filter(rule => 
         rule.isActive && 
-        this.checkConditions(rule.conditions, { type: 'lead_status_changed', leadId, newStatus })
+        this.checkConditions(rule.conditions, { 
+          type: 'lead_status_changed', 
+          leadId: entityData.id, 
+          newStatus: entityData.status_id,
+          oldStatus: entityData.old_status_id,
+          leadData: leadDetails
+        })
       );
 
-      // Выполняем действия для каждого подходящего правила
       for (const rule of applicableRules) {
-        await this.executeActions(rule.actions, { leadId, newStatus, userId });
+        await this.executeActions(rule.actions, { 
+          leadId: entityData.id, 
+          newStatus: entityData.status_id,
+          oldStatus: entityData.old_status_id,
+          leadData: leadDetails, 
+          userId 
+        });
         await this.storage.incrementRuleExecution(rule.id);
       }
     } catch (error) {
-      await this.logService.log(undefined, 'error', 'Ошибка при обработке изменения статуса сделки', { error, payload }, 'webhook');
+      await this.logService.log(userId, 'error', 'Ошибка при применении правил для изменения статуса сделки', { error, entityData }, 'webhook');
     }
   }
 
   private async handleLeadCreated(payload: any): Promise<void> {
-    try {
-      const leadId = payload.lead_id;
-      const leadData = payload.lead;
-      const userId = payload.user_id;
+    const { userId, leadDetails, entityData } = payload;
+    
+    await this.logService.log(userId, 'info', 'AmoCRM - Новая сделка создана', { 
+      leadId: entityData.id,
+      leadDetails,
+      entityData
+    }, 'webhook');
 
+    // Здесь можно добавить логику отправки в LPTracker или другие действия
+    // на основе правил синхронизации пользователя
+    try {
       const rules = await this.storage.getSyncRules(userId);
       const applicableRules = rules.filter(rule => 
         rule.isActive && 
-        this.checkConditions(rule.conditions, { type: 'lead_created', leadId, leadData })
+        this.checkConditions(rule.conditions, { type: 'lead_created', leadId: entityData.id, leadData: leadDetails })
       );
 
       for (const rule of applicableRules) {
-        await this.executeActions(rule.actions, { leadId, leadData, userId });
+        await this.executeActions(rule.actions, { leadId: entityData.id, leadData: leadDetails, userId });
         await this.storage.incrementRuleExecution(rule.id);
       }
     } catch (error) {
-      await this.logService.log(undefined, 'error', 'Ошибка при обработке создания сделки', { error, payload }, 'webhook');
+      await this.logService.log(userId, 'error', 'Ошибка при применении правил для новой сделки', { error, entityData }, 'webhook');
+    }
+  }
+
+  private async handleLeadUpdated(payload: any): Promise<void> {
+    const { userId, leadDetails, entityData } = payload;
+    
+    await this.logService.log(userId, 'info', 'AmoCRM - Сделка обновлена', { 
+      leadId: entityData.id,
+      leadDetails,
+      entityData
+    }, 'webhook');
+
+    try {
+      const rules = await this.storage.getSyncRules(userId);
+      const applicableRules = rules.filter(rule => 
+        rule.isActive && 
+        this.checkConditions(rule.conditions, { type: 'lead_updated', leadId: entityData.id, leadData: leadDetails })
+      );
+
+      for (const rule of applicableRules) {
+        await this.executeActions(rule.actions, { leadId: entityData.id, leadData: leadDetails, userId });
+        await this.storage.incrementRuleExecution(rule.id);
+      }
+    } catch (error) {
+      await this.logService.log(userId, 'error', 'Ошибка при применении правил для обновленной сделки', { error, entityData }, 'webhook');
     }
   }
 
