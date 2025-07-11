@@ -244,7 +244,13 @@ export default function RuleConstructor({
     if (actionType === 'sync_to_amocrm') {
       // Use available fields from API if loaded, otherwise fallback
       if (amoCrmAvailableFields) {
-        return amoCrmAvailableFields.map((field: any) => ({
+        const allFields = [
+          ...amoCrmAvailableFields.contactFields.standard,
+          ...amoCrmAvailableFields.contactFields.custom,
+          ...amoCrmAvailableFields.leadFields.standard,
+          ...amoCrmAvailableFields.leadFields.custom
+        ];
+        return allFields.map((field: any) => ({
           id: field.id,
           name: field.name,
           type: field.type,
@@ -274,7 +280,13 @@ export default function RuleConstructor({
     } else if (actionType === 'sync_to_lptracker') {
       // Use available fields from API if loaded, otherwise fallback
       if (lpTrackerAvailableFields) {
-        return lpTrackerAvailableFields.map((field: any) => ({
+        const allFields = [
+          ...lpTrackerAvailableFields.contactFields.standard,
+          ...lpTrackerAvailableFields.contactFields.custom,
+          ...lpTrackerAvailableFields.leadFields.standard,
+          ...lpTrackerAvailableFields.leadFields.custom
+        ];
+        return allFields.map((field: any) => ({
           id: field.id,
           name: field.name,
           type: field.type,

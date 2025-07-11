@@ -355,25 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available fields for mapping
-  app.get('/api/field-mapping/available-fields/:targetCrm', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { targetCrm } = req.params;
-      
-      if (!['amocrm', 'lptracker'].includes(targetCrm)) {
-        return res.status(400).json({ message: 'Недопустимый тип CRM' });
-      }
-      
-      const smartFieldMapper = new (await import('./services/smartFieldMapper')).SmartFieldMapper(storage);
-      const fields = await smartFieldMapper.getAvailableFields(userId, targetCrm as 'amocrm' | 'lptracker');
-      
-      res.json(fields);
-    } catch (error) {
-      console.error('Error getting available fields:', error);
-      res.status(500).json({ message: 'Не удалось получить доступные поля' });
-    }
-  });
+
 
   // Check if LPTracker is configured globally
   app.get('/api/lptracker/global-status', requireAuth, async (req: any, res) => {
