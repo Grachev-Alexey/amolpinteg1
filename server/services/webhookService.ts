@@ -10,6 +10,10 @@ export class WebhookService {
   private amoCrmService: AmoCrmService;
   private lpTrackerService: LpTrackerService;
   private smartFieldMapper: SmartFieldMapper;
+  
+  // In-memory кеш для дедупликации с автоочисткой
+  private webhookCache = new Map<string, number>();
+  private readonly CACHE_TTL = 10 * 60 * 1000; // 10 минут
 
   constructor(storage: IStorage) {
     this.storage = storage;
@@ -17,6 +21,9 @@ export class WebhookService {
     this.amoCrmService = new AmoCrmService(storage);
     this.lpTrackerService = new LpTrackerService(storage);
     this.smartFieldMapper = new SmartFieldMapper(storage);
+    
+    // Автоочистка кеша каждые 5 минут
+    setInterval(() => this.cleanupCache(), 5 * 60 * 1000);
   }
 
   async handleAmoCrmWebhook(payload: any): Promise<void> {
@@ -178,30 +185,33 @@ export class WebhookService {
       // Получаем правила пользователя и обрабатываем событие
       const syncRules = await this.storage.getSyncRules(userId);
       
-      // Обрабатываем вебхук через правила без привязки к типу события
+      // Обрабатываем вебхук через правила с умной фильтрацией
       for (const rule of syncRules) {
         try {
           // Проверяем условия правила
           if (this.checkConditions(rule.conditions, webhookData)) {
             
-            // Проверяем, не был ли уже обработан этот webhook для данного правила
             const leadId = String(webhookData.id);
             const actionTimestamp = webhookData.action_timestamp;
-            
-            const alreadyProcessed = await this.storage.checkWebhookProcessed(
-              userId, 
-              'lptracker', 
-              leadId, 
-              rule.id, 
-              actionTimestamp
-            );
 
-            if (alreadyProcessed) {
-              await this.logService.log(userId, 'info', `LPTracker - Правило "${rule.name}" уже было обработано для этого события`, { 
+            // Быстрая проверка дедупликации через in-memory кеш
+            if (this.isWebhookAlreadyProcessed(userId, leadId, rule.id, actionTimestamp)) {
+              await this.logService.log(userId, 'info', `LPTracker - Правило "${rule.name}" уже обработано (кеш)`, { 
                 ruleId: rule.id,
                 ruleName: rule.name,
                 leadId: webhookData.id,
                 actionTimestamp
+              }, 'webhook');
+              continue;
+            }
+
+            // Умная проверка релевантности изменений
+            if (!this.isWebhookRelevant(webhookData, rule)) {
+              await this.logService.log(userId, 'info', `LPTracker - Правило "${rule.name}" пропущено: изменения не релевантны`, { 
+                ruleId: rule.id,
+                ruleName: rule.name,
+                leadId: webhookData.id,
+                updatedFields: webhookData.action_update_fields
               }, 'webhook');
               continue;
             }
@@ -216,14 +226,8 @@ export class WebhookService {
             // Выполняем действия правила
             await this.executeActions(rule.actions, { ...webhookData, userId });
             
-            // Отмечаем webhook как обработанный
-            await this.storage.markWebhookProcessed(
-              userId, 
-              'lptracker', 
-              leadId, 
-              rule.id, 
-              actionTimestamp
-            );
+            // Используем in-memory кеш для быстрой дедупликации
+            this.markWebhookProcessedInMemory(userId, leadId, rule.id, actionTimestamp);
             
             // Увеличиваем счетчик выполнений правила
             await this.storage.incrementRuleExecution(rule.id);
@@ -345,6 +349,93 @@ export class WebhookService {
     }
   }
 
+  // Современные методы дедупликации webhook
+  private generateWebhookKey(userId: string, leadId: string, ruleId: number, timestamp?: number): string {
+    return `${userId}:${leadId}:${ruleId}:${timestamp || 'default'}`;
+  }
+
+  private isWebhookAlreadyProcessed(userId: string, leadId: string, ruleId: number, timestamp?: number): boolean {
+    const key = this.generateWebhookKey(userId, leadId, ruleId, timestamp);
+    const cached = this.webhookCache.get(key);
+    
+    if (cached && Date.now() - cached < this.CACHE_TTL) {
+      return true;
+    }
+    
+    if (cached) {
+      this.webhookCache.delete(key); // Очищаем просроченные
+    }
+    
+    return false;
+  }
+
+  private markWebhookProcessedInMemory(userId: string, leadId: string, ruleId: number, timestamp?: number): void {
+    const key = this.generateWebhookKey(userId, leadId, ruleId, timestamp);
+    this.webhookCache.set(key, Date.now());
+  }
+
+  private cleanupCache(): void {
+    const now = Date.now();
+    for (const [key, timestamp] of this.webhookCache.entries()) {
+      if (now - timestamp > this.CACHE_TTL) {
+        this.webhookCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Умная проверка релевантности webhook на основе измененных полей
+   * Обрабатываем только те webhook, которые действительно важны для правила
+   */
+  private isWebhookRelevant(webhookData: any, rule: any): boolean {
+    // Если нет информации об измененных полях - обрабатываем
+    if (!webhookData.action_update_fields || !Array.isArray(webhookData.action_update_fields)) {
+      return true;
+    }
+
+    const updatedFields = webhookData.action_update_fields;
+    
+    // Всегда обрабатываем изменения этапа/статуса
+    if (updatedFields.includes('stage') || updatedFields.includes('stage_id')) {
+      return true;
+    }
+
+    // Всегда обрабатываем изменения оплат
+    if (updatedFields.includes('payments')) {
+      return true;
+    }
+
+    // Проверяем, затрагивают ли изменения поля, используемые в условиях правила
+    if (rule.conditions?.rules) {
+      for (const condition of rule.conditions.rules) {
+        if (condition.field && condition.type?.includes('field_')) {
+          // Проверяем, изменилось ли поле, которое используется в условии
+          const fieldPattern = `custom.${condition.field}`;
+          if (updatedFields.some((field: string) => field.includes(condition.field) || field === fieldPattern)) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // Проверяем, затрагивают ли изменения поля из маппинга действий правила
+    if (rule.actions?.list) {
+      for (const action of rule.actions.list) {
+        if (action.fieldMappings) {
+          for (const [sourceField] of Object.entries(action.fieldMappings)) {
+            const fieldPattern = `custom.${sourceField}`;
+            if (updatedFields.some((field: string) => field.includes(sourceField) || field === fieldPattern)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    // Если изменения не касаются полей, используемых в правиле - пропускаем
+    return false;
+  }
+
   // Главный метод обработки правил для сделки
   private async processLeadRules(userId: string, leadId: string, leadDetails: any, contactsDetails: any[], originalPayload: any): Promise<void> {
     try {
@@ -389,17 +480,10 @@ export class WebhookService {
               leadId
             }, 'webhook');
 
-            // Проверяем, не был ли уже обработан этот webhook для данного правила
+            // Быстрая проверка дедупликации через in-memory кеш для AmoCRM
             const leadIdStr = String(leadId);
-            const alreadyProcessed = await this.storage.checkWebhookProcessed(
-              userId, 
-              'amocrm', 
-              leadIdStr, 
-              rule.id
-            );
-
-            if (alreadyProcessed) {
-              await this.logService.log(userId, 'info', `AmoCRM - Правило "${rule.name}" уже было обработано для этого события`, { 
+            if (this.isWebhookAlreadyProcessed(userId, leadIdStr, rule.id)) {
+              await this.logService.log(userId, 'info', `AmoCRM - Правило "${rule.name}" уже обработано (кеш)`, { 
                 ruleId: rule.id,
                 ruleName: rule.name,
                 leadId
@@ -410,13 +494,8 @@ export class WebhookService {
             // Выполняем действия правила
             await this.executeActions(rule.actions, eventData);
             
-            // Отмечаем webhook как обработанный
-            await this.storage.markWebhookProcessed(
-              userId, 
-              'amocrm', 
-              leadIdStr, 
-              rule.id
-            );
+            // Отмечаем webhook как обработанный в кеше
+            this.markWebhookProcessedInMemory(userId, leadIdStr, rule.id);
             
             await this.storage.incrementRuleExecution(rule.id);
           } else {
