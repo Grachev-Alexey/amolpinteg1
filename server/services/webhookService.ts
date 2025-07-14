@@ -3,6 +3,8 @@ import { LogService } from "./logService";
 import { AmoCrmService } from "./amoCrmService";
 import { LpTrackerService } from "./lpTrackerService";
 import { SmartFieldMapper } from "./smartFieldMapper";
+import { WebhookQueue } from "./webhookQueue";
+import { PerformanceOptimizer } from "./performanceOptimizer";
 
 export class WebhookService {
   private storage: IStorage;
@@ -14,6 +16,12 @@ export class WebhookService {
   // In-memory кеш для дедупликации с автоочисткой
   private webhookCache = new Map<string, number>();
   private readonly CACHE_TTL = 10 * 60 * 1000; // 10 минут
+  
+  // Очередь для асинхронной обработки webhook
+  private webhookQueue: WebhookQueue;
+  
+  // Оптимизатор производительности
+  private performanceOptimizer: PerformanceOptimizer;
 
   constructor(storage: IStorage) {
     this.storage = storage;
@@ -21,12 +29,66 @@ export class WebhookService {
     this.amoCrmService = new AmoCrmService(storage);
     this.lpTrackerService = new LpTrackerService(storage);
     this.smartFieldMapper = new SmartFieldMapper(storage);
+    this.performanceOptimizer = new PerformanceOptimizer(storage);
+    
+    // Инициализируем очередь webhook с учетом нагрузки
+    const concurrency = process.env.NODE_ENV === 'production' ? 15 : 5;
+    this.webhookQueue = new WebhookQueue(storage, concurrency);
+    
+    // Обработчик задач из очереди
+    this.webhookQueue.on('process-webhook', async (job) => {
+      try {
+        if (job.type === 'amocrm') {
+          await this.processAmoCrmWebhook(job.payload);
+        } else if (job.type === 'lptracker') {
+          await this.processLpTrackerWebhook(job.payload);
+        }
+      } catch (error) {
+        throw error; // Очередь сама обработает ошибку и retry
+      }
+    });
     
     // Автоочистка кеша каждые 5 минут
     setInterval(() => this.cleanupCache(), 5 * 60 * 1000);
+    
+    // Очистка старых задач в очереди каждый час
+    setInterval(() => this.webhookQueue.cleanup(), 60 * 60 * 1000);
   }
 
-  async handleAmoCrmWebhook(payload: any): Promise<void> {
+  // Быстрые входные точки - добавляют в очередь и возвращают управление
+  async handleAmoCrmWebhook(payload: any): Promise<string> {
+    return await this.webhookQueue.addJob({
+      type: 'amocrm',
+      payload,
+      maxAttempts: 3
+    });
+  }
+
+  async handleLpTrackerWebhook(payload: any): Promise<string> {
+    return await this.webhookQueue.addJob({
+      type: 'lptracker', 
+      payload,
+      maxAttempts: 3
+    });
+  }
+
+  // Получение статистики очереди для мониторинга
+  getQueueStats() {
+    return this.webhookQueue.getQueueStats();
+  }
+
+  // Получение метрик производительности
+  async getPerformanceMetrics() {
+    return await this.performanceOptimizer.getPerformanceMetrics();
+  }
+
+  // Принудительная очистка кешей (для админа)
+  clearCaches() {
+    this.performanceOptimizer.clearAllCaches();
+  }
+
+  // Методы фактической обработки (вызываются из очереди)
+  private async processAmoCrmWebhook(payload: any): Promise<void> {
     try {
       console.log("AmoCRM Webhook Processing - Payload structure:", {
         keys: Object.keys(payload || {}),
@@ -127,7 +189,7 @@ export class WebhookService {
     }
   }
 
-  async handleLpTrackerWebhook(payload: any): Promise<void> {
+  private async processLpTrackerWebhook(payload: any): Promise<void> {
     try {
       console.log("LPTracker Webhook Processing - Payload structure:", {
         keys: Object.keys(payload || {}),
@@ -182,8 +244,8 @@ export class WebhookService {
         contactName: webhookData.contact?.name
       }, 'webhook');
 
-      // Получаем правила пользователя и обрабатываем событие
-      const syncRules = await this.storage.getSyncRules(userId);
+      // Получаем правила пользователя с кешированием для производительности
+      const syncRules = await this.performanceOptimizer.getCachedSyncRules(userId);
       
       // Обрабатываем вебхук через правила с умной фильтрацией
       for (const rule of syncRules) {
