@@ -185,6 +185,18 @@ export default function RuleConstructor({
   };
 
   const availableData = getAvailableFields();
+  
+  // Separate function to get data for actions - always include AmoCRM metadata for sync actions
+  const getActionData = () => {
+    return {
+      pipelines, // AmoCRM pipelines always available for sync actions
+      statuses: allStatuses, // AmoCRM statuses always available for sync actions
+      fields: availableData.fields, // Fields from current webhook source
+      lpTrackerFunnelSteps // LPTracker funnel steps for LPTracker sync actions
+    };
+  };
+  
+  const actionData = getActionData();
 
   // Эффект для обновления правила при изменении initialRule
   useEffect(() => {
@@ -728,7 +740,7 @@ export default function RuleConstructor({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="auto">Автоматически</SelectItem>
-                            {availableData.pipelines?.map((pipeline: any) => (
+                            {actionData.pipelines?.map((pipeline: any) => (
                               <SelectItem key={pipeline.id} value={pipeline.id.toString() || "undefined"}>
                                 {pipeline.name}
                               </SelectItem>
@@ -750,7 +762,7 @@ export default function RuleConstructor({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="auto">Автоматически</SelectItem>
-                            {availableData.statuses
+                            {actionData.statuses
                               ?.filter((status: any) => !action.amocrmPipelineId || status.pipelineId.toString() === action.amocrmPipelineId)
                               .map((status: any) => (
                                 <SelectItem key={status.id} value={status.id.toString() || "undefined"}>
@@ -779,7 +791,7 @@ export default function RuleConstructor({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="auto">Автоматически</SelectItem>
-                            {lpTrackerFunnelSteps.map((stage: any) => (
+                            {actionData.lpTrackerFunnelSteps.map((stage: any) => (
                               <SelectItem key={stage.id} value={stage.id.toString() || "undefined"}>
                                 {stage.name}
                               </SelectItem>
