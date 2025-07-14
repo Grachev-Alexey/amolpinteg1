@@ -720,14 +720,14 @@ export default function RuleConstructor({
                           Воронка AmoCRM
                         </Label>
                         <Select
-                          value={action.amocrmPipelineId || ''}
-                          onValueChange={(value) => updateAction(action.id, "amocrmPipelineId", value)}
+                          value={action.amocrmPipelineId || 'default'}
+                          onValueChange={(value) => updateAction(action.id, "amocrmPipelineId", value === 'default' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Выберите воронку (по умолчанию)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">По умолчанию</SelectItem>
+                            <SelectItem value="default">По умолчанию</SelectItem>
                             {availableData.pipelines?.map((pipeline: any) => (
                               <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
                                 {pipeline.name}
@@ -742,16 +742,16 @@ export default function RuleConstructor({
                           Статус AmoCRM
                         </Label>
                         <Select
-                          value={action.amocrmStatusId || ''}
-                          onValueChange={(value) => updateAction(action.id, "amocrmStatusId", value)}
+                          value={action.amocrmStatusId || 'default'}
+                          onValueChange={(value) => updateAction(action.id, "amocrmStatusId", value === 'default' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Выберите статус (по умолчанию)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">По умолчанию</SelectItem>
+                            <SelectItem value="default">По умолчанию</SelectItem>
                             {availableData.statuses
-                              ?.filter((status: any) => !action.amocrmPipelineId || status.pipelineId.toString() === action.amocrmPipelineId)
+                              ?.filter((status: any) => !action.amocrmPipelineId || action.amocrmPipelineId === 'default' || status.pipelineId.toString() === action.amocrmPipelineId)
                               .map((status: any) => (
                                 <SelectItem key={status.id} value={status.id.toString()}>
                                   {status.pipelineName}: {status.name}
@@ -771,15 +771,15 @@ export default function RuleConstructor({
                           Этап LPTracker
                         </Label>
                         <Select
-                          value={action.lptrackerStageId || ''}
-                          onValueChange={(value) => updateAction(action.id, "lptrackerStageId", value)}
+                          value={action.lptrackerStageId || 'default'}
+                          onValueChange={(value) => updateAction(action.id, "lptrackerStageId", value === 'default' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Выберите этап (по умолчанию)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">По умолчанию</SelectItem>
-                            {lpTrackerFunnelData?.data?.map((stage: any) => (
+                            <SelectItem value="default">По умолчанию</SelectItem>
+                            {(lpTrackerFunnelData?.data || []).map((stage: any) => (
                               <SelectItem key={stage.id} value={stage.id.toString()}>
                                 {stage.name}
                               </SelectItem>
@@ -793,14 +793,14 @@ export default function RuleConstructor({
                           Проект LPTracker  
                         </Label>
                         <Select
-                          value={action.lptrackerProjectId || ''}
-                          onValueChange={(value) => updateAction(action.id, "lptrackerProjectId", value)}
+                          value={action.lptrackerProjectId || 'default'}
+                          onValueChange={(value) => updateAction(action.id, "lptrackerProjectId", value === 'default' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Текущий проект" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Текущий проект</SelectItem>
+                            <SelectItem value="default">Текущий проект</SelectItem>
                             {/* Здесь можно добавить список проектов когда будет API */}
                           </SelectContent>
                         </Select>
