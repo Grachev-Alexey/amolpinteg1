@@ -460,18 +460,26 @@ export class SmartFieldMapper {
 
     // Кастомные поля AmoCRM
     if (/^\d+$/.test(sourceField)) {
-      const fieldId = sourceField;
+      const fieldId = parseInt(sourceField);
       
       // Поиск в лидах
-      const leadCustomField = sourceData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
-      if (leadCustomField) {
-        return leadCustomField.values?.[0]?.value || '';
+      const leadCustomField = sourceData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id === fieldId);
+      if (leadCustomField && leadCustomField.values && leadCustomField.values[0] && leadCustomField.values[0].value !== null) {
+        return leadCustomField.values[0].value;
       }
       
       // Поиск в контактах
-      const contactCustomField = sourceData.contactsDetails?.[0]?.custom_fields_values?.find((f: any) => f.field_id == fieldId);
-      if (contactCustomField) {
-        return contactCustomField.values?.[0]?.value || '';
+      const contactCustomField = sourceData.contactsDetails?.[0]?.custom_fields_values?.find((f: any) => f.field_id === fieldId);
+      if (contactCustomField && contactCustomField.values && contactCustomField.values[0] && contactCustomField.values[0].value !== null) {
+        return contactCustomField.values[0].value;
+      }
+      
+      // Дополнительная проверка в исходных данных webhook (backup)
+      if (sourceData.custom_fields) {
+        const customField = sourceData.custom_fields.find((f: any) => f.field_id === fieldId);
+        if (customField && customField.values && customField.values[0] && customField.values[0].value !== null) {
+          return customField.values[0].value;
+        }
       }
     }
 
