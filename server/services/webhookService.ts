@@ -572,6 +572,9 @@ export class WebhookService {
 
           // Добавляем fieldMappings в данные для Smart Field Mapper
           webhookData.fieldMappings = action.fieldMappings || {};
+          
+          // Сохраняем исходные данные события для SmartFieldMapper
+          webhookData.originalEventData = eventData;
 
           // Добавляем настройки воронки и статуса для AmoCRM (только если не пустые)
           if (action.amocrmPipelineId && action.amocrmPipelineId !== '') {

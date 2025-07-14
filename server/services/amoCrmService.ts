@@ -234,10 +234,13 @@ export class AmoCrmService {
 
       // Применяем SmartFieldMapper для маппинга полей
       if (webhookData.fieldMappings && Object.keys(webhookData.fieldMappings).length > 0) {
+        // Передаем исходные данные события (originalEventData) если они есть, иначе webhookData
+        const sourceDataForMapping = webhookData.originalEventData || webhookData;
+        
         const mappedFields = await this.smartFieldMapper.smartMapFields(
           userId,
           webhookData.fieldMappings,
-          webhookData,
+          sourceDataForMapping,
           'amocrm'
         );
 

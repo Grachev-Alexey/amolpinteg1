@@ -36,7 +36,11 @@ export class SmartFieldMapper {
     }
 
     await this.logService.log(userId, 'info', `Smart Field Mapper - Начинаем маппирование для ${targetCrm}`, { 
-      fieldMappings
+      fieldMappings,
+      sourceDataKeys: Object.keys(sourceData || {}),
+      hasContact: !!(sourceData && sourceData.contact),
+      hasContactFields: !!(sourceData && sourceData.contact && sourceData.contact.fields),
+      contactFieldsLength: sourceData && sourceData.contact && sourceData.contact.fields ? sourceData.contact.fields.length : 0
     }, 'smart_mapper');
 
     // Обрабатываем каждое маппирование
@@ -46,12 +50,7 @@ export class SmartFieldMapper {
       // Получаем значение из исходных данных
       const sourceValue = this.extractSourceValue(sourceField, sourceData);
       
-      await this.logService.log(userId, 'info', `Smart Field Mapper - Извлечение значения`, { 
-        sourceField,
-        sourceValue,
-        valueType: typeof sourceValue,
-        isEmpty: sourceValue === undefined || sourceValue === null || sourceValue === ''
-      }, 'smart_mapper');
+
       
       if (sourceValue === undefined || sourceValue === null || sourceValue === '') {
         await this.logService.log(userId, 'warning', `Smart Field Mapper - Пропускаем поле с пустым значением`, { 
@@ -443,6 +442,15 @@ export class SmartFieldMapper {
   }
 
   private extractSourceValue(sourceField: string, sourceData: any): any {
+    // Добавляем детальное логирование для отладки
+    this.logService.log(undefined, 'info', 'Smart Field Mapper - Извлечение значения', {
+      sourceField,
+      hasContact: !!(sourceData && sourceData.contact),
+      hasContactFields: !!(sourceData && sourceData.contact && sourceData.contact.fields),
+      contactFieldsLength: sourceData && sourceData.contact && sourceData.contact.fields ? sourceData.contact.fields.length : 0,
+      contactFieldsPreview: sourceData && sourceData.contact && sourceData.contact.fields ? sourceData.contact.fields.slice(0, 2) : []
+    }, 'smart_mapper');
+
     // Стандартные поля
     const standardFields: { [key: string]: (data: any) => any } = {
       'name': (data) => data.leadDetails?.name || data.contactsDetails?.[0]?.name || data.name || '',
@@ -487,6 +495,14 @@ export class SmartFieldMapper {
         const customField = sourceData.custom.find((f: any) => f.id === fieldId);
         if (customField && customField.value !== null && customField.value !== undefined) {
           return customField.value;
+        }
+      }
+      
+      // Поиск в полях контакта LPTracker
+      if (sourceData.contact && sourceData.contact.fields && Array.isArray(sourceData.contact.fields)) {
+        const contactField = sourceData.contact.fields.find((f: any) => f.id === fieldId);
+        if (contactField && contactField.value !== null && contactField.value !== undefined) {
+          return contactField.value;
         }
       }
     }
