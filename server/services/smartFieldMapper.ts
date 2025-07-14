@@ -475,10 +475,18 @@ export class SmartFieldMapper {
       }
       
       // Дополнительная проверка в исходных данных webhook (backup)
-      if (sourceData.custom_fields) {
+      if (sourceData.custom_fields && Array.isArray(sourceData.custom_fields)) {
         const customField = sourceData.custom_fields.find((f: any) => f.field_id === fieldId);
         if (customField && customField.values && customField.values[0] && customField.values[0].value !== null) {
           return customField.values[0].value;
+        }
+      }
+      
+      // Поиск в данных LPTracker
+      if (sourceData.custom && Array.isArray(sourceData.custom)) {
+        const customField = sourceData.custom.find((f: any) => f.id === fieldId);
+        if (customField && customField.value !== null && customField.value !== undefined) {
+          return customField.value;
         }
       }
     }
