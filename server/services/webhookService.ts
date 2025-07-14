@@ -508,16 +508,49 @@ export class WebhookService {
             return String(statusId) === String(condition.value);
           
           case 'field_equals':
+            // Для AmoCRM проверяем в custom_fields_values
             const fieldValue = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == condition.field)?.values?.[0]?.value;
-            return String(fieldValue) === String(condition.value);
+            if (fieldValue !== undefined) {
+              return String(fieldValue) === String(condition.value);
+            }
+            
+            // Для LPTracker проверяем в массиве custom
+            const lpTrackerFieldValue = eventData.custom?.find((f: any) => f.id == condition.field)?.value;
+            if (lpTrackerFieldValue !== undefined) {
+              return String(lpTrackerFieldValue) === String(condition.value);
+            }
+            
+            return false;
           
           case 'field_contains':
+            // Для AmoCRM проверяем в custom_fields_values
             const fieldValueContains = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == condition.field)?.values?.[0]?.value;
-            return fieldValueContains?.includes(condition.value);
+            if (fieldValueContains !== undefined) {
+              return fieldValueContains?.includes(condition.value);
+            }
+            
+            // Для LPTracker проверяем в массиве custom
+            const lpTrackerField = eventData.custom?.find((f: any) => f.id == condition.field)?.value;
+            if (lpTrackerField !== undefined) {
+              return lpTrackerField?.includes(condition.value);
+            }
+            
+            return false;
           
           case 'field_not_empty':
+            // Для AmoCRM проверяем в custom_fields_values
             const fieldValueNotEmpty = eventData.leadDetails?.custom_fields_values?.find((f: any) => f.field_id == condition.field)?.values?.[0]?.value;
-            return fieldValueNotEmpty != null && fieldValueNotEmpty !== '';
+            if (fieldValueNotEmpty !== undefined) {
+              return fieldValueNotEmpty != null && fieldValueNotEmpty !== '';
+            }
+            
+            // Для LPTracker проверяем в массиве custom
+            const lpTrackerFieldNotEmpty = eventData.custom?.find((f: any) => f.id == condition.field)?.value;
+            if (lpTrackerFieldNotEmpty !== undefined) {
+              return lpTrackerFieldNotEmpty != null && lpTrackerFieldNotEmpty !== '';
+            }
+            
+            return false;
           
           default:
             console.log(`Неизвестный тип условия: ${condition.type}`, condition);
