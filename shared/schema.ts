@@ -230,7 +230,7 @@ export const insertSyncRuleSchema = createInsertSchema(syncRules).omit({
       id: z.string(),
       type: z.enum(['sync_to_amocrm', 'sync_to_lptracker']),
       searchBy: z.string().default('phone'),
-      fieldMappings: z.record(z.string()).optional(),
+      fieldMappings: z.record(z.union([z.string(), z.number()])).optional(),
       createIfNotFound: z.boolean().default(true)
     }))
   })
