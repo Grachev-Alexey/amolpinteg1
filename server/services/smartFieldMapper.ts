@@ -45,7 +45,19 @@ export class SmartFieldMapper {
 
       // Получаем значение из исходных данных
       const sourceValue = this.extractSourceValue(sourceField, sourceData);
+      
+      await this.logService.log(userId, 'info', `Smart Field Mapper - Извлечение значения`, { 
+        sourceField,
+        sourceValue,
+        valueType: typeof sourceValue,
+        isEmpty: sourceValue === undefined || sourceValue === null || sourceValue === ''
+      }, 'smart_mapper');
+      
       if (sourceValue === undefined || sourceValue === null || sourceValue === '') {
+        await this.logService.log(userId, 'warning', `Smart Field Mapper - Пропускаем поле с пустым значением`, { 
+          sourceField,
+          sourceValue
+        }, 'smart_mapper');
         continue;
       }
 
