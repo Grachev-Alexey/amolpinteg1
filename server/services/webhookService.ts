@@ -573,19 +573,19 @@ export class WebhookService {
           // Добавляем fieldMappings в данные для Smart Field Mapper
           webhookData.fieldMappings = action.fieldMappings || {};
 
-          // Добавляем настройки воронки и статуса для AmoCRM
-          if (action.amocrmPipelineId) {
+          // Добавляем настройки воронки и статуса для AmoCRM (только если не пустые)
+          if (action.amocrmPipelineId && action.amocrmPipelineId !== '') {
             webhookData.amocrmPipelineId = action.amocrmPipelineId;
           }
-          if (action.amocrmStatusId) {
+          if (action.amocrmStatusId && action.amocrmStatusId !== '') {
             webhookData.amocrmStatusId = action.amocrmStatusId;
           }
 
-          // Добавляем настройки этапа и проекта для LPTracker
-          if (action.lptrackerStageId) {
+          // Добавляем настройки этапа и проекта для LPTracker (только если не пустые)
+          if (action.lptrackerStageId && action.lptrackerStageId !== '') {
             webhookData.lptrackerStageId = action.lptrackerStageId;
           }
-          if (action.lptrackerProjectId) {
+          if (action.lptrackerProjectId && action.lptrackerProjectId !== '') {
             webhookData.lptrackerProjectId = action.lptrackerProjectId;
           }
 
