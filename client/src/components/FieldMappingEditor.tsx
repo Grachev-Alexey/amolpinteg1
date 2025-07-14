@@ -116,7 +116,7 @@ export default function FieldMappingEditor({
                           return (
                             <SelectItem 
                               key={field.id} 
-                              value={field.id}
+                              value={field.id || "undefined"}
                               disabled={isUsed}
                             >
                               <div className="flex items-center justify-between w-full">
@@ -158,7 +158,7 @@ export default function FieldMappingEditor({
                           return (
                             <SelectItem 
                               key={field.id} 
-                              value={field.id}
+                              value={field.id || "undefined"}
                               disabled={isUsed}
                             >
                               <div className="flex flex-col">

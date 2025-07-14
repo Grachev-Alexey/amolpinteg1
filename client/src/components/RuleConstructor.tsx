@@ -542,7 +542,7 @@ export default function RuleConstructor({
                         </SelectTrigger>
                         <SelectContent>
                           {availableData.pipelines?.map((pipeline: any) => (
-                            <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
+                            <SelectItem key={pipeline.id} value={pipeline.id.toString() || "undefined"}>
                               {pipeline.name}
                             </SelectItem>
                           ))}
@@ -565,7 +565,7 @@ export default function RuleConstructor({
                         </SelectTrigger>
                         <SelectContent>
                           {availableData.statuses?.map((status: any) => (
-                            <SelectItem key={status.id} value={status.id.toString()}>
+                            <SelectItem key={status.id} value={status.id.toString() || "undefined"}>
                               {rule.webhookSource === 'amocrm' 
                                 ? `${status.pipelineName}: ${status.name}`
                                 : status.name
@@ -587,7 +587,7 @@ export default function RuleConstructor({
                       </SelectTrigger>
                       <SelectContent>
                         {availableData.fields?.map((field: any) => (
-                          <SelectItem key={field.id} value={field.id.toString()}>
+                          <SelectItem key={field.id} value={field.id.toString() || "undefined"}>
                             {rule.webhookSource === 'amocrm' ? '📋' : '🎯'} {field.name}
                           </SelectItem>
                         ))}
@@ -606,7 +606,7 @@ export default function RuleConstructor({
                         </SelectTrigger>
                         <SelectContent>
                           {availableData.fields?.map((field: any) => (
-                            <SelectItem key={field.id} value={field.id.toString()}>
+                            <SelectItem key={field.id} value={field.id.toString() || "undefined"}>
                               {rule.webhookSource === 'amocrm' ? '📋' : '🎯'} {field.name}
                             </SelectItem>
                           ))}
@@ -720,16 +720,16 @@ export default function RuleConstructor({
                           Воронка AmoCRM
                         </Label>
                         <Select
-                          value={action.amocrmPipelineId || ''}
-                          onValueChange={(value) => updateAction(action.id, "amocrmPipelineId", value)}
+                          value={action.amocrmPipelineId || 'auto'}
+                          onValueChange={(value) => updateAction(action.id, "amocrmPipelineId", value === 'auto' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Автоматически" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Автоматически</SelectItem>
+                            <SelectItem value="auto">Автоматически</SelectItem>
                             {availableData.pipelines?.map((pipeline: any) => (
-                              <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
+                              <SelectItem key={pipeline.id} value={pipeline.id.toString() || "undefined"}>
                                 {pipeline.name}
                               </SelectItem>
                             ))}
@@ -742,18 +742,18 @@ export default function RuleConstructor({
                           Статус AmoCRM
                         </Label>
                         <Select
-                          value={action.amocrmStatusId || ''}
-                          onValueChange={(value) => updateAction(action.id, "amocrmStatusId", value)}
+                          value={action.amocrmStatusId || 'auto'}
+                          onValueChange={(value) => updateAction(action.id, "amocrmStatusId", value === 'auto' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Автоматически" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Автоматически</SelectItem>
+                            <SelectItem value="auto">Автоматически</SelectItem>
                             {availableData.statuses
                               ?.filter((status: any) => !action.amocrmPipelineId || status.pipelineId.toString() === action.amocrmPipelineId)
                               .map((status: any) => (
-                                <SelectItem key={status.id} value={status.id.toString()}>
+                                <SelectItem key={status.id} value={status.id.toString() || "undefined"}>
                                   {status.pipelineName}: {status.name}
                                 </SelectItem>
                               ))}
@@ -771,16 +771,16 @@ export default function RuleConstructor({
                           Этап LPTracker
                         </Label>
                         <Select
-                          value={action.lptrackerStageId || ''}
-                          onValueChange={(value) => updateAction(action.id, "lptrackerStageId", value)}
+                          value={action.lptrackerStageId || 'auto'}
+                          onValueChange={(value) => updateAction(action.id, "lptrackerStageId", value === 'auto' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Автоматически" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Автоматически</SelectItem>
+                            <SelectItem value="auto">Автоматически</SelectItem>
                             {lpTrackerFunnelSteps.map((stage: any) => (
-                              <SelectItem key={stage.id} value={stage.id.toString()}>
+                              <SelectItem key={stage.id} value={stage.id.toString() || "undefined"}>
                                 {stage.name}
                               </SelectItem>
                             ))}
@@ -793,14 +793,14 @@ export default function RuleConstructor({
                           Проект LPTracker  
                         </Label>
                         <Select
-                          value={action.lptrackerProjectId || ''}
-                          onValueChange={(value) => updateAction(action.id, "lptrackerProjectId", value)}
+                          value={action.lptrackerProjectId || 'current'}
+                          onValueChange={(value) => updateAction(action.id, "lptrackerProjectId", value === 'current' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Текущий проект" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Текущий проект</SelectItem>
+                            <SelectItem value="current">Текущий проект</SelectItem>
                             {/* Здесь можно добавить список проектов когда будет API */}
                           </SelectContent>
                         </Select>
