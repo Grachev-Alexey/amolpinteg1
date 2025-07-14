@@ -487,6 +487,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/sync-rules', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
+      
+      // Log the incoming data for debugging
+      console.log("Creating sync rule with data:", JSON.stringify(req.body, null, 2));
+      
       const validatedData = insertSyncRuleSchema.parse({
         ...req.body,
         userId,
@@ -497,7 +501,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(rule);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Некорректные данные", errors: error.errors });
+        console.error("Validation errors:", error.errors);
+        return res.status(400).json({ 
+          message: "Некорректные данные", 
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message,
+            code: err.code
+          }))
+        });
       }
       console.error("Error creating sync rule:", error);
       res.status(500).json({ message: "Не удалось создать правило синхронизации" });
