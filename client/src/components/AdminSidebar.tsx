@@ -59,6 +59,12 @@ export default function AdminSidebar() {
       active: location === "/admin/webhooks",
     },
     {
+      icon: Activity,
+      label: "Производительность",
+      href: "/admin/performance",
+      active: location === "/admin/performance",
+    },
+    {
       icon: Settings,
       label: "Настройки",
       href: "/admin/settings",

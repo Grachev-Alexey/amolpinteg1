@@ -21,6 +21,7 @@ import UserManagement from "@/pages/admin/UserManagement";
 import SystemSettings from "@/pages/admin/SystemSettings";
 import IntegrationsAndMonitoring from "@/pages/admin/IntegrationsAndMonitoring";
 import WebhookManagement from "@/pages/admin/WebhookManagement";
+import PerformanceMonitoring from "@/pages/admin/PerformanceMonitoring";
 
 // Component to handle redirects for unauthenticated users
 function AuthRedirect() {
@@ -66,6 +67,7 @@ function Router() {
           <Route path="/admin/users" component={UserManagement} />
           <Route path="/admin/integrations" component={IntegrationsAndMonitoring} />
           <Route path="/admin/webhooks" component={WebhookManagement} />
+          <Route path="/admin/performance" component={PerformanceMonitoring} />
           <Route path="/admin/settings" component={SystemSettings} />
           <Route path="/admin/logs" component={Logs} />
         </AdminLayout>

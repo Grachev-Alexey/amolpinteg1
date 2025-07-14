@@ -708,6 +708,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Анализ масштабирования
+  app.get('/api/admin/scaling-analysis', requireSuperuser, async (req, res) => {
+    try {
+      const { ScalingOptimizer } = await import('../services/scalingOptimizer');
+      const scalingOptimizer = new ScalingOptimizer(storage);
+      
+      const analysis = await scalingOptimizer.analyzeBottlenecks();
+      res.json(analysis);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Расчет ресурсов для целевого количества пользователей
+  app.post('/api/admin/calculate-resources', requireSuperuser, async (req, res) => {
+    try {
+      const { userCount } = req.body;
+      if (!userCount || userCount < 1) {
+        return res.status(400).json({ error: 'Необходимо указать количество пользователей' });
+      }
+
+      const { ScalingOptimizer } = await import('../services/scalingOptimizer');
+      const scalingOptimizer = new ScalingOptimizer(storage);
+      
+      const requirements = scalingOptimizer.calculateResourceRequirements(userCount);
+      const migrationPlan = await scalingOptimizer.generateMigrationPlan(userCount);
+      
+      res.json({
+        requirements,
+        migrationPlan,
+        dockerCompose: userCount > 1000 ? scalingOptimizer.generateEnterpriseDockerCompose() : null
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Admin monitoring endpoints
   app.get('/api/admin/system-health', requireSuperuser, async (req: any, res) => {
     try {
