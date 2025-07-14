@@ -265,7 +265,12 @@ export class AmoCrmService {
           mappedContactFields: Object.keys(mappedFields.contactFields),
           mappedLeadFields: Object.keys(mappedFields.leadFields),
           notesCount: mappedFields.notes?.length || 0,
-          tasksCount: mappedFields.tasks?.length || 0
+          tasksCount: mappedFields.tasks?.length || 0,
+          webhookDataAfterMapping: {
+            hasCustomFields: !!(webhookData.custom_fields_values),
+            customFieldsLength: webhookData.custom_fields_values?.length || 0,
+            customFieldsValues: webhookData.custom_fields_values
+          }
         }, 'amocrm');
       }
 
@@ -412,7 +417,18 @@ export class AmoCrmService {
           id: existingDeal.id,
           name: webhookData.deal_name || existingDeal.name,
           price: webhookData.price || existingDeal.price,
+          custom_fields_values: []
         };
+
+        // Добавляем кастомные поля сделки из маппинга
+        if (webhookData.custom_fields_values && Array.isArray(webhookData.custom_fields_values)) {
+          updateData.custom_fields_values.push(...webhookData.custom_fields_values);
+          await this.logService.log(userId, 'info', 'AmoCRM - Обновляем сделку с кастомными полями', { 
+            dealId: existingDeal.id,
+            customFieldsCount: webhookData.custom_fields_values.length,
+            customFields: webhookData.custom_fields_values
+          }, 'amocrm');
+        }
 
         // Обновляем воронку и статус если указаны в настройках действия
         if (webhookData.amocrmPipelineId && webhookData.amocrmPipelineId !== '') {
@@ -431,6 +447,13 @@ export class AmoCrmService {
           }, 'amocrm');
         }
 
+        // Логируем данные, которые отправляются в AmoCRM
+        await this.logService.log(userId, 'info', 'AmoCRM - Отправляем данные обновления сделки в API', { 
+          dealId: existingDeal.id,
+          updateData: updateData,
+          hasCustomFields: updateData.custom_fields_values && updateData.custom_fields_values.length > 0
+        }, 'amocrm');
+
         const updateResponse = await fetch(`${baseUrl}/leads`, {
           method: 'PATCH',
           headers: {
@@ -442,7 +465,19 @@ export class AmoCrmService {
 
         if (updateResponse.ok) {
           const updateResult = await updateResponse.json();
+          await this.logService.log(userId, 'info', 'AmoCRM - Сделка успешно обновлена', { 
+            dealId: existingDeal.id,
+            success: true,
+            responseData: updateResult._embedded.leads[0]
+          }, 'amocrm');
           return updateResult._embedded.leads[0];
+        } else {
+          const errorData = await updateResponse.json();
+          await this.logService.log(userId, 'error', 'AmoCRM - Ошибка при обновлении сделки', { 
+            dealId: existingDeal.id,
+            status: updateResponse.status,
+            error: errorData
+          }, 'amocrm');
         }
         
         return existingDeal;
