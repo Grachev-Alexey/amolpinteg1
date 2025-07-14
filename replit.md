@@ -115,3 +115,4 @@ The application follows a full-stack architecture with clear separation between 
 - **Unified Sync Logic**: Automatic find-or-create logic for contacts and leads
 - **API Integration**: Full AmoCRM v4 and LPTracker API implementation with correct webhook endpoints
 - **Custom Field Mapping**: Complete end-to-end mapping of custom fields from LPTracker to AmoCRM for both new and existing deals (Fixed: July 14, 2025)
+- **Webhook Deduplication**: Automatic prevention of duplicate webhook processing using action timestamps and unique constraints (Added: July 14, 2025)

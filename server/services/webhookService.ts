@@ -181,18 +181,49 @@ export class WebhookService {
       // Обрабатываем вебхук через правила без привязки к типу события
       for (const rule of syncRules) {
         try {
-          // Удалено - отладочная информация больше не нужна
-
           // Проверяем условия правила
           if (this.checkConditions(rule.conditions, webhookData)) {
+            
+            // Проверяем, не был ли уже обработан этот webhook для данного правила
+            const leadId = String(webhookData.id);
+            const actionTimestamp = webhookData.action_timestamp;
+            
+            const alreadyProcessed = await this.storage.checkWebhookProcessed(
+              userId, 
+              'lptracker', 
+              leadId, 
+              rule.id, 
+              actionTimestamp
+            );
+
+            if (alreadyProcessed) {
+              await this.logService.log(userId, 'info', `LPTracker - Правило "${rule.name}" уже было обработано для этого события`, { 
+                ruleId: rule.id,
+                ruleName: rule.name,
+                leadId: webhookData.id,
+                actionTimestamp
+              }, 'webhook');
+              continue;
+            }
+
             await this.logService.log(userId, 'info', `LPTracker - Правило "${rule.name}" применимо`, { 
               ruleId: rule.id,
               ruleName: rule.name,
-              leadId: webhookData.id
+              leadId: webhookData.id,
+              actionTimestamp
             }, 'webhook');
 
             // Выполняем действия правила
             await this.executeActions(rule.actions, { ...webhookData, userId });
+            
+            // Отмечаем webhook как обработанный
+            await this.storage.markWebhookProcessed(
+              userId, 
+              'lptracker', 
+              leadId, 
+              rule.id, 
+              actionTimestamp
+            );
             
             // Увеличиваем счетчик выполнений правила
             await this.storage.incrementRuleExecution(rule.id);
@@ -358,8 +389,35 @@ export class WebhookService {
               leadId
             }, 'webhook');
 
+            // Проверяем, не был ли уже обработан этот webhook для данного правила
+            const leadIdStr = String(leadId);
+            const alreadyProcessed = await this.storage.checkWebhookProcessed(
+              userId, 
+              'amocrm', 
+              leadIdStr, 
+              rule.id
+            );
+
+            if (alreadyProcessed) {
+              await this.logService.log(userId, 'info', `AmoCRM - Правило "${rule.name}" уже было обработано для этого события`, { 
+                ruleId: rule.id,
+                ruleName: rule.name,
+                leadId
+              }, 'webhook');
+              continue;
+            }
+
             // Выполняем действия правила
             await this.executeActions(rule.actions, eventData);
+            
+            // Отмечаем webhook как обработанный
+            await this.storage.markWebhookProcessed(
+              userId, 
+              'amocrm', 
+              leadIdStr, 
+              rule.id
+            );
+            
             await this.storage.incrementRuleExecution(rule.id);
           } else {
             await this.logService.log(userId, 'info', `AmoCRM - Правило "${rule.name}" не подходит для сделки ${leadId}`, { 

@@ -9,6 +9,7 @@ import {
   fileUploads,
   callResults,
   systemLogs,
+  webhookProcessingLog,
   type User,
   type UpsertUser,
   type AmoCrmSettings,
@@ -29,6 +30,8 @@ import {
   type InsertCallResult,
   type SystemLog,
   type InsertSystemLog,
+  type WebhookProcessingLog,
+  type InsertWebhookProcessingLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -87,6 +90,10 @@ export interface IStorage {
   // Logs operations
   getSystemLogs(userId?: string): Promise<SystemLog[]>;
   createSystemLog(log: InsertSystemLog): Promise<SystemLog>;
+  
+  // Webhook processing log operations
+  checkWebhookProcessed(userId: string, source: string, leadId: string, ruleId: number, actionTimestamp?: number): Promise<boolean>;
+  markWebhookProcessed(userId: string, source: string, leadId: string, ruleId: number, actionTimestamp?: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -496,6 +503,61 @@ export class DatabaseStorage implements IStorage {
       .values(log)
       .returning();
     return created;
+  }
+
+  // Webhook processing log operations
+  async checkWebhookProcessed(
+    userId: string, 
+    source: string, 
+    leadId: string, 
+    ruleId: number, 
+    actionTimestamp?: number
+  ): Promise<boolean> {
+    const query = db
+      .select()
+      .from(webhookProcessingLog)
+      .where(
+        and(
+          eq(webhookProcessingLog.userId, userId),
+          eq(webhookProcessingLog.source, source),
+          eq(webhookProcessingLog.leadId, leadId),
+          eq(webhookProcessingLog.ruleId, ruleId)
+        )
+      );
+
+    // Добавляем проверку timestamp только если он передан (для LPTracker)
+    if (actionTimestamp !== undefined) {
+      query.where(eq(webhookProcessingLog.actionTimestamp, actionTimestamp));
+    }
+
+    const [result] = await query;
+    return !!result;
+  }
+
+  async markWebhookProcessed(
+    userId: string, 
+    source: string, 
+    leadId: string, 
+    ruleId: number, 
+    actionTimestamp?: number
+  ): Promise<void> {
+    try {
+      await db
+        .insert(webhookProcessingLog)
+        .values({
+          userId,
+          source,
+          leadId,
+          ruleId,
+          actionTimestamp: actionTimestamp || null
+        });
+    } catch (error) {
+      // Игнорируем ошибки дублирования (уникальный индекс)
+      // Это означает, что webhook уже был обработан
+      if (!error.message?.includes('unique constraint')) {
+        throw error;
+      }
+    }
   }
 }
 

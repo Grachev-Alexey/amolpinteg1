@@ -8,6 +8,8 @@ import {
   serial,
   boolean,
   integer,
+  bigint,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -152,6 +154,26 @@ export const systemLogs = pgTable("system_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Webhook processing log to prevent duplicate processing
+export const webhookProcessingLog = pgTable("webhook_processing_log", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  source: varchar("source").notNull(), // lptracker, amocrm
+  leadId: varchar("lead_id").notNull(), // ID лида в источнике
+  actionTimestamp: bigint("action_timestamp", { mode: "number" }), // timestamp от LPTracker
+  ruleId: integer("rule_id").notNull(),
+  processedAt: timestamp("processed_at").defaultNow(),
+}, (table) => ({
+  // Уникальный индекс для предотвращения дублирования
+  uniqueProcessing: uniqueIndex("unique_processing_idx").on(
+    table.userId, 
+    table.source, 
+    table.leadId, 
+    table.ruleId,
+    table.actionTimestamp
+  ),
+}));
+
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -182,6 +204,9 @@ export type CallResult = typeof callResults.$inferSelect;
 
 export type InsertSystemLog = typeof systemLogs.$inferInsert;
 export type SystemLog = typeof systemLogs.$inferSelect;
+
+export type InsertWebhookProcessingLog = typeof webhookProcessingLog.$inferInsert;
+export type WebhookProcessingLog = typeof webhookProcessingLog.$inferSelect;
 
 // Insert schemas
 export const insertAmoCrmSettingsSchema = createInsertSchema(amoCrmSettings).omit({
