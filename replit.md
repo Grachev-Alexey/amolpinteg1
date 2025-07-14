@@ -9,50 +9,6 @@ This is a comprehensive CRM integration system designed to connect AmoCRM and LP
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes
-
-### Enhanced Rule Action Settings (July 14, 2025)
-- ✓ Extended rule actions with granular CRM settings for precise control
-- ✓ Added AmoCRM pipeline and status selection for actions (create/move deals in specific pipelines)
-- ✓ Added LPTracker stage selection for lead creation with custom stages
-- ✓ Updated schema to support amocrmPipelineId, amocrmStatusId, lptrackerStageId parameters
-- ✓ Enhanced UI with visual pipeline/status selectors with proper filtering
-- ✓ Updated services to use custom pipeline/status settings when specified
-- ✓ Fixed custom field extraction for AmoCRM fields (1163705, 1169777) using strict equality
-- ✓ Full webhook-to-CRM sync now supports user-controlled target settings
-
-### Replit Migration (July 14, 2025)
-- ✓ Successfully migrated project from Replit Agent to Replit environment
-- ✓ Set up PostgreSQL database with proper environment variables
-- ✓ Applied database migrations successfully
-- ✓ Fixed validation schema issue in sync rules (fieldMappings accepts both strings and numbers)
-- ✓ Verified full application functionality including CRM integrations
-- ✓ Project is now ready for production use in Replit environment
-
-### Smart Field Mapper Improvements (July 10, 2025)
-- ✓ Fixed hardcoded field IDs for phone (449213) and email (449215) in AmoCRM integration
-- ✓ Added dynamic field ID resolution using CRM metadata
-- ✓ Implemented `findStandardFieldId` method to lookup proper field IDs from metadata
-- ✓ Removed hardcoded field ID range assumptions that were incorrect for different users
-- ✓ System now properly uses individual user's CRM metadata for field mapping
-- ✓ Added comprehensive logging for field mapping operations
-
-### Extended Field Mapping Capabilities (July 10, 2025)
-- ✓ Expanded mapping system to support AmoCRM notes and tasks
-- ✓ Added special mapping targets: 'note' for deal comments, 'task' for reminders
-- ✓ Created `createNotes` and `createTasks` methods in AmoCRM service
-- ✓ Enhanced FieldMappingEditor to show field descriptions and better categorization
-- ✓ Added API endpoint `/api/field-mapping/available-fields/:targetCrm` for dynamic field loading
-- ✓ System now supports mapping to: contact fields, lead fields, notes, tasks, and future entities
-
-### Code Quality and Architecture Cleanup (July 10, 2025)
-- ✓ Removed duplicate `parseOldFormatMapping` method from SmartFieldMapper
-- ✓ Removed duplicate `applyFieldMapping` and `getFieldValue` methods from WebhookService
-- ✓ Unified field mapping logic to use only SmartFieldMapper
-- ✓ Cleaned up redundant code to prevent conflicts and confusion
-- ✓ All field mapping now goes through the enhanced SmartFieldMapper system
-
-
 ## System Architecture
 
 The application follows a full-stack architecture with clear separation between frontend and backend components:
