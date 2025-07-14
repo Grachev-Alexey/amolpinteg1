@@ -411,6 +411,23 @@ export class AmoCrmService {
           price: webhookData.price || existingDeal.price,
         };
 
+        // Обновляем воронку и статус если указаны в настройках действия
+        if (webhookData.amocrmPipelineId) {
+          updateData.pipeline_id = parseInt(webhookData.amocrmPipelineId);
+          await this.logService.log(userId, 'info', 'AmoCRM - Обновляем сделку с кастомной воронкой', { 
+            dealId: existingDeal.id,
+            pipelineId: updateData.pipeline_id 
+          }, 'amocrm');
+        }
+        
+        if (webhookData.amocrmStatusId) {
+          updateData.status_id = parseInt(webhookData.amocrmStatusId);
+          await this.logService.log(userId, 'info', 'AmoCRM - Обновляем сделку с кастомным статусом', { 
+            dealId: existingDeal.id,
+            statusId: updateData.status_id 
+          }, 'amocrm');
+        }
+
         const updateResponse = await fetch(`${baseUrl}/leads`, {
           method: 'PATCH',
           headers: {
@@ -435,6 +452,21 @@ export class AmoCrmService {
         contacts: [{ id: contactId }],
         custom_fields_values: []
       };
+
+      // Добавляем воронку и статус если указаны в настройках действия
+      if (webhookData.amocrmPipelineId) {
+        dealData.pipeline_id = parseInt(webhookData.amocrmPipelineId);
+        await this.logService.log(userId, 'info', 'AmoCRM - Установлена кастомная воронка', { 
+          pipelineId: dealData.pipeline_id 
+        }, 'amocrm');
+      }
+      
+      if (webhookData.amocrmStatusId) {
+        dealData.status_id = parseInt(webhookData.amocrmStatusId);
+        await this.logService.log(userId, 'info', 'AmoCRM - Установлен кастомный статус', { 
+          statusId: dealData.status_id 
+        }, 'amocrm');
+      }
 
       // Добавляем кастомные поля сделки из маппинга
       if (webhookData.deal_custom_fields) {

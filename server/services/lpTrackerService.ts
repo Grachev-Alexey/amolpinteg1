@@ -182,7 +182,7 @@ export class LpTrackerService {
         contact_id: contactId,
         name: webhookData.deal_name || webhookData.name || 'Новый лид',
         callback: webhookData.callback || false,
-        funnel: webhookData.funnel || null,
+        funnel: webhookData.lptrackerStageId || webhookData.funnel || null,
         view: {
           source: webhookData.source || 'API',
           campaign: webhookData.campaign || '',

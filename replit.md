@@ -11,6 +11,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Enhanced Rule Action Settings (July 14, 2025)
+- ✓ Extended rule actions with granular CRM settings for precise control
+- ✓ Added AmoCRM pipeline and status selection for actions (create/move deals in specific pipelines)
+- ✓ Added LPTracker stage selection for lead creation with custom stages
+- ✓ Updated schema to support amocrmPipelineId, amocrmStatusId, lptrackerStageId parameters
+- ✓ Enhanced UI with visual pipeline/status selectors with proper filtering
+- ✓ Updated services to use custom pipeline/status settings when specified
+- ✓ Fixed custom field extraction for AmoCRM fields (1163705, 1169777) using strict equality
+- ✓ Full webhook-to-CRM sync now supports user-controlled target settings
+
 ### Replit Migration (July 14, 2025)
 - ✓ Successfully migrated project from Replit Agent to Replit environment
 - ✓ Set up PostgreSQL database with proper environment variables

@@ -573,6 +573,22 @@ export class WebhookService {
           // Добавляем fieldMappings в данные для Smart Field Mapper
           webhookData.fieldMappings = action.fieldMappings || {};
 
+          // Добавляем настройки воронки и статуса для AmoCRM
+          if (action.amocrmPipelineId) {
+            webhookData.amocrmPipelineId = action.amocrmPipelineId;
+          }
+          if (action.amocrmStatusId) {
+            webhookData.amocrmStatusId = action.amocrmStatusId;
+          }
+
+          // Добавляем настройки этапа и проекта для LPTracker
+          if (action.lptrackerStageId) {
+            webhookData.lptrackerStageId = action.lptrackerStageId;
+          }
+          if (action.lptrackerProjectId) {
+            webhookData.lptrackerProjectId = action.lptrackerProjectId;
+          }
+
           switch (action.type) {
             case 'sync_to_amocrm':
               await this.amoCrmService.syncToAmoCrm(eventData.userId, webhookData, action.searchBy || 'phone');

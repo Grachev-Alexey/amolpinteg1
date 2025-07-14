@@ -711,6 +711,102 @@ export default function RuleConstructor({
                       </div>
                     )}
                   </div>
+
+                  {/* Дополнительные настройки для AmoCRM */}
+                  {action.type === 'sync_to_amocrm' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div>
+                        <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          Воронка AmoCRM
+                        </Label>
+                        <Select
+                          value={action.amocrmPipelineId || ''}
+                          onValueChange={(value) => updateAction(action.id, "amocrmPipelineId", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите воронку (по умолчанию)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">По умолчанию</SelectItem>
+                            {availableData.pipelines?.map((pipeline: any) => (
+                              <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
+                                {pipeline.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          Статус AmoCRM
+                        </Label>
+                        <Select
+                          value={action.amocrmStatusId || ''}
+                          onValueChange={(value) => updateAction(action.id, "amocrmStatusId", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите статус (по умолчанию)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">По умолчанию</SelectItem>
+                            {availableData.statuses
+                              ?.filter((status: any) => !action.amocrmPipelineId || status.pipelineId.toString() === action.amocrmPipelineId)
+                              .map((status: any) => (
+                                <SelectItem key={status.id} value={status.id.toString()}>
+                                  {status.pipelineName}: {status.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Дополнительные настройки для LPTracker */}
+                  {action.type === 'sync_to_lptracker' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <div>
+                        <Label className="text-sm font-medium text-green-700 dark:text-green-300">
+                          Этап LPTracker
+                        </Label>
+                        <Select
+                          value={action.lptrackerStageId || ''}
+                          onValueChange={(value) => updateAction(action.id, "lptrackerStageId", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите этап (по умолчанию)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">По умолчанию</SelectItem>
+                            {lpTrackerFunnelData?.data?.map((stage: any) => (
+                              <SelectItem key={stage.id} value={stage.id.toString()}>
+                                {stage.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-green-700 dark:text-green-300">
+                          Проект LPTracker  
+                        </Label>
+                        <Select
+                          value={action.lptrackerProjectId || ''}
+                          onValueChange={(value) => updateAction(action.id, "lptrackerProjectId", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Текущий проект" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Текущий проект</SelectItem>
+                            {/* Здесь можно добавить список проектов когда будет API */}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                   
                   {action.type && (
                     <div className="space-y-4">

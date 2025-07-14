@@ -231,7 +231,13 @@ export const insertSyncRuleSchema = createInsertSchema(syncRules).omit({
       type: z.enum(['sync_to_amocrm', 'sync_to_lptracker']),
       searchBy: z.string().default('phone'),
       fieldMappings: z.record(z.union([z.string(), z.number()])).optional(),
-      createIfNotFound: z.boolean().default(true)
+      createIfNotFound: z.boolean().default(true),
+      // Дополнительные настройки для AmoCRM
+      amocrmPipelineId: z.string().optional(),
+      amocrmStatusId: z.string().optional(),
+      // Дополнительные настройки для LPTracker
+      lptrackerStageId: z.string().optional(),
+      lptrackerProjectId: z.string().optional()
     }))
   })
 });
